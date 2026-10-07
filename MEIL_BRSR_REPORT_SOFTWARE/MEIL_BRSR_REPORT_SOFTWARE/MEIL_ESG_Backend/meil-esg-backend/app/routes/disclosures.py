@@ -1,5 +1,7 @@
 from flask import Blueprint, request, jsonify
 from app.extensions import db
+from app.models.organization import Organization
+from app.models.period import ReportingPeriod
 from app.models.disclosure import (
     EntityDisclosure, BusinessActivity, ProductService, PolicyCoverage, Commitment,
     GovernanceReview, Core8Fairness, Core9Openness,

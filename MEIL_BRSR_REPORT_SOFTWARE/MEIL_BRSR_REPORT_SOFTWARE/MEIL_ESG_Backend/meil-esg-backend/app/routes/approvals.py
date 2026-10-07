@@ -36,6 +36,17 @@ def queue():
     return jsonify({"items": [s.to_dict() for s in items], "meta": meta})
 
 
+@bp.get("/pending/count")
+@roles_required("BU_MANAGER", "GROUP_ADMIN", "ESG_MANAGER")
+def pending_count():
+    from app.security.permissions import accessible_project_ids
+    allowed = accessible_project_ids(g.current_user)
+    q = EsgSubmission.query.filter_by(status=STATUS_SUBMITTED)
+    if allowed is not None:
+        q = q.filter(EsgSubmission.project_id.in_(allowed or ["__none__"]))
+    return jsonify({"count": q.count()})
+
+
 @bp.get("/<submission_id>")
 @roles_required("BU_MANAGER", "GROUP_ADMIN", "ESG_MANAGER", "ASSESSOR")
 def detail(submission_id):

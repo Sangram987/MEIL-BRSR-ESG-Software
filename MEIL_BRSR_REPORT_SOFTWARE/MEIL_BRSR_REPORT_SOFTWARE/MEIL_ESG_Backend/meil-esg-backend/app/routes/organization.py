@@ -18,44 +18,24 @@ def org_tree():
     if group is None:
         return jsonify({"group": None, "subsidiaries": []})
 
-def sub_dict(org):
-    relationship = OrganizationRelationship.query.filter_by(
+    def sub_dict(org):
+        relationship = OrganizationRelationship.query.filter_by(
             child_org_id=org.id
         ).first()
 
-    return {
-        **org.to_dict(),
-
-        "relationshipType":
-            relationship.relationship_type
-            if relationship
-            else None,
-
-        "ownershipPercentage":
-            float(
-                relationship.ownership_percentage
-            )
-            if relationship
-            and relationship.ownership_percentage
-            is not None
-            else None,
-
-        "participatesInBrInitiatives":
-            relationship.participates_in_br_initiatives
-            if relationship
-            else True,
-
-        "businessUnits": [
-            {
-                **bu.to_dict(),
-                "projects": [
-                    p.to_dict()
-                    for p in bu.projects
-                ],
-            }
-             for bu in org.business_units
-        ],
-    }
+        return {
+            **org.to_dict(),
+            "relationshipType": relationship.relationship_type if relationship else None,
+            "ownershipPercentage": float(relationship.ownership_percentage) if relationship and relationship.ownership_percentage is not None else None,
+            "participatesInBrInitiatives": relationship.participates_in_br_initiatives if relationship else True,
+            "businessUnits": [
+                {
+                    **bu.to_dict(),
+                    "projects": [p.to_dict() for p in bu.projects],
+                }
+                for bu in org.business_units
+            ],
+        }
 
     subs = Organization.query.filter(Organization.parent_id == group.id).all()
     return jsonify({"group": group.to_dict(), "subsidiaries": [sub_dict(s) for s in subs]})

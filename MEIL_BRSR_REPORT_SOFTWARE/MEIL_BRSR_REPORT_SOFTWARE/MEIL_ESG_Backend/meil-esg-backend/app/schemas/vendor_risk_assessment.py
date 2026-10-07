@@ -1,7 +1,9 @@
-from marshmallow import Schema, fields, validate
+from marshmallow import Schema, fields, validate, EXCLUDE
 
 
 class VendorRequestCreateSchema(Schema):
+    class Meta:
+        unknown = EXCLUDE
     vendorIds = fields.List(fields.Str(), required=True, validate=validate.Length(min=1))
     reportingPeriodId = fields.Str(required=True)
     dueDate = fields.Date(required=True)
@@ -9,16 +11,22 @@ class VendorRequestCreateSchema(Schema):
 
 
 class VendorSubmitSchema(Schema):
+    class Meta:
+        unknown = EXCLUDE
     values = fields.Dict(keys=fields.Str(), values=fields.Raw(), required=True)
     evidence = fields.Dict(keys=fields.Str(), values=fields.Str(allow_none=True), load_default=dict)
 
 
 class VendorReviewSchema(Schema):
+    class Meta:
+        unknown = EXCLUDE
     decision = fields.Str(required=True, validate=validate.OneOf(["ACCEPT", "CORRECTION_REQUIRED"]))
     comment = fields.Str(load_default="")
 
 
 class RiskSchema(Schema):
+    class Meta:
+        unknown = EXCLUDE
     title = fields.Str(required=True, validate=validate.Length(min=1, max=255))
     type = fields.Str(load_default="RISK", validate=validate.OneOf(["RISK", "OPPORTUNITY"]))
     category = fields.Str(required=True, validate=validate.OneOf(["Environmental", "Social", "Governance"]))
@@ -38,6 +46,8 @@ class RiskSchema(Schema):
 
 
 class AssessmentOpinionSchema(Schema):
+    class Meta:
+        unknown = EXCLUDE
     mode = fields.Str(required=True, validate=validate.OneOf(["ASSESSMENT", "ASSURANCE"]))
     status = fields.Str(required=True)
     provider = fields.Str(load_default="")
@@ -49,3 +59,5 @@ class AssessmentOpinionSchema(Schema):
     exceptions = fields.Str(load_default="")
     independenceConfirmed = fields.Bool(required=True)
     note = fields.Str(load_default="")
+    reportingPeriodId = fields.Str(load_default="")
+    organizationId = fields.Str(load_default="")

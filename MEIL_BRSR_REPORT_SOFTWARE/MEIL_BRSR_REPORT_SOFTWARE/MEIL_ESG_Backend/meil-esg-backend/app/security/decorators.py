@@ -48,8 +48,18 @@ def authenticated(fn):
     return wrapper
 
 
+def _flatten(items):
+    out = []
+    for item in items:
+        if isinstance(item, (list, tuple, set)):
+            out.extend(_flatten(item))
+        elif item:
+            out.append(item)
+    return out
+
+
 def _find_id(*names):
-    for name in names:
+    for name in _flatten(names):
         val = request.view_args.get(name) if request.view_args else None
         if val:
             return val
@@ -57,17 +67,18 @@ def _find_id(*names):
         if val:
             return val
         body = request.get_json(silent=True) or {}
-        if body.get(name):
+        if isinstance(body, dict) and body.get(name):
             return body.get(name)
     return None
 
 
-def project_scope_required(param_names=("project_id",)):
+def project_scope_required(*param_names):
+    names = param_names or ("project_id", "projectId")
     def decorator(fn):
         @wraps(fn)
         def wrapper(*args, **kwargs):
             user = getattr(g, "current_user", None) or load_current_user()
-            project_id = _find_id(*param_names)
+            project_id = _find_id(*names)
             if project_id and not user_can_access_project(user, project_id):
                 raise ApiError("You do not have access to this project.", 403)
             return fn(*args, **kwargs)
@@ -75,12 +86,13 @@ def project_scope_required(param_names=("project_id",)):
     return decorator
 
 
-def business_unit_scope_required(param_names=("business_unit_id",)):
+def business_unit_scope_required(*param_names):
+    names = param_names or ("business_unit_id", "businessUnitId")
     def decorator(fn):
         @wraps(fn)
         def wrapper(*args, **kwargs):
             user = getattr(g, "current_user", None) or load_current_user()
-            bu_id = _find_id(*param_names)
+            bu_id = _find_id(*names)
             if bu_id and not user_can_access_business_unit(user, bu_id):
                 raise ApiError("You do not have access to this business unit.", 403)
             return fn(*args, **kwargs)
@@ -88,12 +100,13 @@ def business_unit_scope_required(param_names=("business_unit_id",)):
     return decorator
 
 
-def organization_scope_required(param_names=("organization_id",)):
+def organization_scope_required(*param_names):
+    names = param_names or ("organization_id", "organizationId")
     def decorator(fn):
         @wraps(fn)
         def wrapper(*args, **kwargs):
             user = getattr(g, "current_user", None) or load_current_user()
-            org_id = _find_id(*param_names)
+            org_id = _find_id(*names)
             if org_id and not user_can_access_organization(user, org_id):
                 raise ApiError("You do not have access to this organization.", 403)
             return fn(*args, **kwargs)
@@ -101,12 +114,13 @@ def organization_scope_required(param_names=("organization_id",)):
     return decorator
 
 
-def vendor_scope_required(param_names=("vendor_id",)):
+def vendor_scope_required(*param_names):
+    names = param_names or ("vendor_id", "vendorId")
     def decorator(fn):
         @wraps(fn)
         def wrapper(*args, **kwargs):
             user = getattr(g, "current_user", None) or load_current_user()
-            vendor_id = _find_id(*param_names)
+            vendor_id = _find_id(*names)
             if vendor_id and not user_can_access_vendor(user, vendor_id):
                 raise ApiError("You do not have access to this vendor.", 403)
             return fn(*args, **kwargs)

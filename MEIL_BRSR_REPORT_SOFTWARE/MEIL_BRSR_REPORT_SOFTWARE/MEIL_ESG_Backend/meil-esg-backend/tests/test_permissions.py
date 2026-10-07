@@ -45,8 +45,9 @@ def test_vendor_cannot_access_another_vendor(client):
 
     resp = client.get("/api/v1/vendors", headers=auth_header(token_a))
     all_vendors = resp.get_json()
-    assert len(all_vendors) >= 2
-    other_vendor = all_vendors[-1]
+    from app.models.user import User
+    user = User.query.filter_by(email="vendora@example.com").first()
+    other_vendor = next(v for v in all_vendors if v["id"] not in user.scope_ids("VENDOR"))
 
     resp = client.get(f"/api/v1/vendors/{other_vendor['id']}", headers=auth_header(token_a))
     assert resp.status_code == 403

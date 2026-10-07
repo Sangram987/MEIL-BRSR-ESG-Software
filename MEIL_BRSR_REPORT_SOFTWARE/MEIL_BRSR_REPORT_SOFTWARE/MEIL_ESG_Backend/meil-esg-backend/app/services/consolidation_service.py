@@ -29,12 +29,21 @@ def boundary_ok(org: Organization, mode: str, include_jv: bool) -> bool:
 def _projects_in_scope(scope_type, scope_id, boundary_mode="CONSOLIDATED", include_jv=False):
     q = Project.query.join(BusinessUnit, Project.business_unit_id == BusinessUnit.id)
     if scope_type == "PROJECT":
-        q = q.filter(Project.id == scope_id)
+        if scope_id:
+            prj = Project.query.filter((Project.id == scope_id) | (Project.project_code == scope_id)).first()
+            target_id = prj.id if prj else scope_id
+            q = q.filter(Project.id == target_id)
     elif scope_type == "BUSINESS_UNIT":
-        q = q.filter(Project.business_unit_id == scope_id)
+        if scope_id:
+            bu = BusinessUnit.query.filter((BusinessUnit.id == scope_id) | (BusinessUnit.code == scope_id)).first()
+            target_id = bu.id if bu else scope_id
+            q = q.filter(Project.business_unit_id == target_id)
     elif scope_type == "SUBSIDIARY":
-        descendant_ids = _descendant_org_ids(scope_id)
-        q = q.filter(BusinessUnit.organization_id.in_(descendant_ids))
+        if scope_id:
+            org = Organization.query.filter((Organization.id == scope_id) | (Organization.code == scope_id)).first()
+            target_id = org.id if org else scope_id
+            descendant_ids = _descendant_org_ids(target_id)
+            q = q.filter(BusinessUnit.organization_id.in_(descendant_ids))
     # GROUP: no extra filter, every project is in scope before the boundary check below
 
     projects = q.all()
@@ -47,8 +56,10 @@ def _projects_in_scope(scope_type, scope_id, boundary_mode="CONSOLIDATED", inclu
 
 
 def _descendant_org_ids(org_id):
-    ids = [org_id]
-    for child in Organization.query.filter_by(parent_id=org_id).all():
+    org = Organization.query.filter((Organization.id == org_id) | (Organization.code == org_id)).first()
+    target_id = org.id if org else org_id
+    ids = [target_id]
+    for child in Organization.query.filter_by(parent_id=target_id).all():
         ids.extend(_descendant_org_ids(child.id))
     return ids
 
@@ -117,11 +128,15 @@ def rollup_children(scope_type, scope_id, reporting_period_id, boundary_mode="CO
             rows.append({"id": org.id, "name": org.name, "level": "SUBSIDIARY",
                          "excluded": not boundary_ok(org, boundary_mode, include_jv), **node})
     elif scope_type == "SUBSIDIARY":
-        for bu in BusinessUnit.query.filter_by(organization_id=scope_id).all():
+        org = Organization.query.filter((Organization.id == scope_id) | (Organization.code == scope_id)).first()
+        target_id = org.id if org else scope_id
+        for bu in BusinessUnit.query.filter_by(organization_id=target_id).all():
             node = node_totals("BUSINESS_UNIT", bu.id, reporting_period_id, boundary_mode, include_jv)
             rows.append({"id": bu.id, "name": bu.name, "level": "BUSINESS_UNIT", "excluded": False, **node})
     elif scope_type == "BUSINESS_UNIT":
-        for p in Project.query.filter_by(business_unit_id=scope_id).all():
+        bu = BusinessUnit.query.filter((BusinessUnit.id == scope_id) | (BusinessUnit.code == scope_id)).first()
+        target_id = bu.id if bu else scope_id
+        for p in Project.query.filter_by(business_unit_id=target_id).all():
             node = node_totals("PROJECT", p.id, reporting_period_id, boundary_mode, include_jv)
             rows.append({"id": p.id, "name": p.name, "level": "PROJECT", "excluded": False, **node})
     return rows

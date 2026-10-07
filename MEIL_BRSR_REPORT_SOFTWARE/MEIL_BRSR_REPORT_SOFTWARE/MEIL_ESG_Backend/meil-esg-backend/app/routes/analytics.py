@@ -15,6 +15,16 @@ def _scope_args():
     boundary_mode = request.args.get("boundaryMode", "CONSOLIDATED").upper()
     include_jv = request.args.get("includeJv", "false").lower() == "true"
     if not period_id:
+        fy = request.args.get("financialYear")
+        if fy:
+            p = ReportingPeriod.query.filter_by(financial_year=fy, period_type="FINANCIAL_YEAR").first()
+            if p:
+                period_id = p.id
+        if not period_id:
+            p = ReportingPeriod.query.filter_by(period_type="FINANCIAL_YEAR").order_by(ReportingPeriod.start_date.desc()).first()
+            if p:
+                period_id = p.id
+    if not period_id:
         raise ApiError("reportingPeriodId is required.", 422)
     return scope_type, scope_id, period_id, boundary_mode, include_jv
 
