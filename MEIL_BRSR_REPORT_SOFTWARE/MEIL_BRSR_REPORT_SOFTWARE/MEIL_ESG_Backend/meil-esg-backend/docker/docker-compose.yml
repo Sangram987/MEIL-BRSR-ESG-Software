@@ -1,0 +1,98 @@
+version: "3.9"
+
+services:
+  mysql:
+    image: mysql:8.0
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: meil_esg
+      MYSQL_USER: esg_user
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-change_me}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-change_me_root}
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+
+  minio:
+    image: minio/minio:latest
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ACCESS_KEY:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_SECRET_KEY:-minioadmin}
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio_data:/data
+
+  api:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    restart: unless-stopped
+    env_file: ../.env
+    environment:
+      DATABASE_URL: mysql+pymysql://esg_user:${MYSQL_PASSWORD:-change_me}@mysql:3306/meil_esg
+      REDIS_URL: redis://redis:6379/0
+      STORAGE_BACKEND: minio
+      MINIO_ENDPOINT: minio:9000
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_started
+      minio:
+        condition: service_started
+    ports:
+      - "5000:5000"
+    command: >
+      sh -c "flask db upgrade &&
+             python -m seeds.run_seed &&
+             gunicorn -w 4 -b 0.0.0.0:5000 --timeout 120 run:app"
+
+  worker:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    restart: unless-stopped
+    env_file: ../.env
+    environment:
+      DATABASE_URL: mysql+pymysql://esg_user:${MYSQL_PASSWORD:-change_me}@mysql:3306/meil_esg
+      REDIS_URL: redis://redis:6379/0
+      STORAGE_BACKEND: minio
+      MINIO_ENDPOINT: minio:9000
+      CELERY_TASK_ALWAYS_EAGER: "false"
+    depends_on:
+      - api
+    command: celery -A app.celery_app.celery_app worker --loglevel=info
+
+  beat:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    restart: unless-stopped
+    env_file: ../.env
+    environment:
+      DATABASE_URL: mysql+pymysql://esg_user:${MYSQL_PASSWORD:-change_me}@mysql:3306/meil_esg
+      REDIS_URL: redis://redis:6379/0
+      CELERY_TASK_ALWAYS_EAGER: "false"
+    depends_on:
+      - api
+    command: celery -A app.celery_app.celery_app beat --loglevel=info
+
+volumes:
+  mysql_data:
+  minio_data:

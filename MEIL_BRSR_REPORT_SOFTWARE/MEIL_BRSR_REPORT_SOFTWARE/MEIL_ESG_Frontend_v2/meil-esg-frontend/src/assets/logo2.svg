@@ -1,0 +1,24 @@
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Premium Dark Background -->
+  <rect width="512" height="512" rx="128" fill="#0F172A"/>
+  <rect x="8" y="8" width="496" height="496" rx="120" stroke="white" stroke-opacity="0.1" stroke-width="16"/>
+  
+  <!-- Gradients -->
+  <defs>
+    <linearGradient id="brandGrad" x1="100" y1="100" x2="400" y2="400" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#10B981"/> <!-- Emerald -->
+      <stop offset="0.5" stop-color="#0EA5E9"/> <!-- Sky Blue -->
+      <stop offset="1" stop-color="#6366F1"/> <!-- Indigo -->
+    </linearGradient>
+  </defs>
+
+  <!-- Modern Geometric 'M' -->
+  <path d="M140 360V180L210 260L280 180V300" stroke="url(#brandGrad)" stroke-width="40" stroke-linecap="round" stroke-linejoin="round"/>
+  
+  <!-- Sustainability Leaf Accent -->
+  <path d="M280 180C330 130 380 130 380 180C380 230 330 280 280 280" fill="url(#brandGrad)" fill-opacity="0.9"/>
+
+  <!-- Digital Data Node -->
+  <circle cx="360" cy="340" r="30" fill="#10B981"/>
+  <path d="M280 280L360 340" stroke="#0EA5E9" stroke-width="16" stroke-dasharray="20 20"/>
+</svg>

@@ -1,0 +1,50 @@
+# --- Web framework ---
+Flask==3.0.3
+Flask-SQLAlchemy==3.1.1
+Flask-Migrate==4.0.7
+Flask-JWT-Extended==4.6.0
+Flask-Cors==4.0.1
+Flask-Limiter==3.8.0
+
+# --- DB driver ---
+SQLAlchemy==2.0.32
+PyMySQL==1.1.1
+cryptography==43.0.1          # required by PyMySQL for sha256_password / caching_sha2_password
+
+# --- Validation / serialization ---
+marshmallow==3.22.0
+
+# --- Security ---
+argon2-cffi==23.1.0
+bcrypt==4.2.0
+
+# --- Background processing ---
+celery==5.4.0
+redis==5.0.8
+
+# --- Object storage ---
+minio==7.2.8
+
+# --- Data / analytics / AI ---
+pandas==2.2.2
+numpy==1.26.4
+scikit-learn==1.5.1
+
+# --- Reporting ---
+openpyxl==3.1.5
+reportlab==4.2.2
+lxml==5.3.0
+
+# --- Ops ---
+python-dotenv==1.0.1
+gunicorn==22.0.0
+
+# --- Testing ---
+pytest==8.3.2
+pytest-flask==1.3.0
+faker==28.4.1
+
+# --- Optional AI providers (only needed if AI_PROVIDER=gemini / openai in .env; the default
+# AI_PROVIDER=rule_based needs neither package) ---
+# google-generativeai==0.8.1
+# openai==1.44.0

@@ -1,0 +1,73 @@
+@import "tailwindcss";
+
+/* The original pages use `animate-in / fade-in / slide-in-from-*` utilities that come from
+   the tailwindcss-animate plugin, which was never installed. These small equivalents make
+   those classes actually work without adding a dependency. */
+@keyframes meil-fade { from { opacity: 0 } to { opacity: 1 } }
+@keyframes meil-slide-up { from { opacity: 0; transform: translateY(14px) } to { opacity: 1; transform: none } }
+@keyframes meil-slide-down { from { opacity: 0; transform: translateY(-14px) } to { opacity: 1; transform: none } }
+@keyframes meil-zoom { from { opacity: 0; transform: scale(.94) } to { opacity: 1; transform: none } }
+.animate-in { animation: meil-fade .25s ease-out both }
+.slide-in-from-bottom-4 { animation-name: meil-slide-up }
+.slide-in-from-top-4 { animation-name: meil-slide-down }
+.zoom-in { animation-name: meil-zoom }
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-in, .slide-in-from-bottom-4, .slide-in-from-top-4, .zoom-in { animation: none }
+}
+
+:focus-visible { outline: 2px solid #2563eb; outline-offset: 2px }
+body { font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; -webkit-font-smoothing: antialiased; line-height: 1.55; color: #0f172a }
+::selection { background: #bfdbfe; color: #0f172a }
+::-webkit-scrollbar { width: 9px; height: 9px }
+::-webkit-scrollbar-track { background: transparent }
+::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 9999px; border: 2px solid #f8fafc }
+::-webkit-scrollbar-thumb:hover { background: #94a3b8 }
+.leaflet-container { font-family: inherit }
+
+.app-theme-dark {
+  min-height: 100vh;
+  color-scheme: dark;
+  color: #e2e8f0;
+  background-color: #020617;
+}
+
+.app-theme-dark .bg-white,
+.app-theme-dark .bg-gray-50,
+.app-theme-dark .bg-gray-100,
+.app-theme-dark [class~="bg-white/80"] { background-color: #0f172a !important }
+.app-theme-dark .bg-slate-50 { background-color: #0f172a !important }
+.app-theme-dark .bg-slate-100,
+.app-theme-dark .bg-gray-200 { background-color: #1e293b !important }
+.app-theme-dark .bg-slate-200 { background-color: #334155 !important }
+.app-theme-dark .bg-slate-300 { background-color: #475569 !important }
+
+.app-theme-dark .text-black,
+.app-theme-dark .text-slate-900,
+.app-theme-dark .text-gray-900 { color: #f8fafc !important }
+.app-theme-dark .text-slate-800,
+.app-theme-dark .text-gray-800 { color: #e2e8f0 !important }
+.app-theme-dark .text-slate-700,
+.app-theme-dark .text-slate-600,
+.app-theme-dark .text-gray-700,
+.app-theme-dark .text-gray-600 { color: #cbd5e1 !important }
+.app-theme-dark .text-slate-500,
+.app-theme-dark .text-slate-400,
+.app-theme-dark .text-gray-500,
+.app-theme-dark .text-gray-400 { color: #94a3b8 !important }
+
+.app-theme-dark .border-slate-100,
+.app-theme-dark .border-slate-200,
+.app-theme-dark .border-gray-100,
+.app-theme-dark .border-gray-200 { border-color: #334155 !important }
+.app-theme-dark .border-slate-300,
+.app-theme-dark .border-gray-300 { border-color: #475569 !important }
+.app-theme-dark [class~="hover:bg-slate-50"]:hover,
+.app-theme-dark [class~="hover:bg-slate-100"]:hover { background-color: #1e293b !important }
+.app-theme-dark [class~="divide-slate-100"] > :not(:first-child),
+.app-theme-dark [class~="divide-slate-200"] > :not(:first-child) { border-color: #334155 !important }
+
+@media print {
+  aside, header, nav, .no-print { display: none !important }
+  main { height: auto !important; overflow: visible !important }
+}
