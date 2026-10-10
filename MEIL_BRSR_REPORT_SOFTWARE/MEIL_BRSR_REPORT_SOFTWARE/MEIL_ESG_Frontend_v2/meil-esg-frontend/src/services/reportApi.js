@@ -150,36 +150,37 @@ export const reportApi = {
   },
 
 
-  async downloadReport(
-    reportId,
-    format = 'PDF'
-  ) {
+  async downloadReport(reportId, format = 'PDF') {
     try {
-      const response =
-        await apiClient.get(
-          `/reports/${reportId}/download`,
-          {
-            params: {
-              format:
-                format.toUpperCase(),
-            },
-
-            responseType:
-              'blob',
-          }
-        );
-
+      const response = await apiClient.get(`/reports/${reportId}/download`, {
+        params: { format: format.toUpperCase() },
+        responseType: 'blob',
+      });
       return response.data;
     } catch (error) {
-      throw new Error(
-        errorMessage(
-          error,
-          'Failed to download report.'
-        )
-      );
+      throw new Error(errorMessage(error, 'Failed to download report.'));
+    }
+  },
+
+  async previewReport(params = {}) {
+    try {
+      const response = await apiClient.get('/reports/preview', { params });
+      return response.data;
+    } catch (error) {
+      throw new Error(errorMessage(error, 'Failed to fetch report preview.'));
+    }
+  },
+
+  async downloadPackage(reportId) {
+    try {
+      const response = await apiClient.get(`/reports/${reportId}/package`, {
+        responseType: 'blob',
+      });
+      return response.data;
+    } catch (error) {
+      throw new Error(errorMessage(error, 'Failed to download audit-ready package.'));
     }
   },
 };
-
 
 export default reportApi;

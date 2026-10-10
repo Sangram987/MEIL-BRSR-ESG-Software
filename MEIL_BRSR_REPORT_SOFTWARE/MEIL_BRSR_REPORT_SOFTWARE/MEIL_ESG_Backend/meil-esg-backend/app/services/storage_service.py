@@ -65,8 +65,8 @@ def delete(storage_key: str):
         os.remove(path)
 
 
-ALLOWED_EXTENSIONS = {"pdf", "xlsx", "xls", "csv", "jpg", "jpeg", "png", "docx", "zip"}
-MAX_SIZES = {"pdf": 10, "xlsx": 20, "xls": 20, "csv": 10, "jpg": 10, "jpeg": 10, "png": 10, "docx": 10, "zip": 25}  # MB
+ALLOWED_EXTENSIONS = {"pdf", "xlsx", "xls", "csv", "jpg", "jpeg", "png", "webp", "tiff", "tif", "docx", "zip"}
+MAX_SIZES = {"pdf": 10, "xlsx": 20, "xls": 20, "csv": 10, "jpg": 10, "jpeg": 10, "png": 10, "webp": 10, "tiff": 15, "tif": 15, "docx": 10, "zip": 25}  # MB
 
 
 def validate_upload(filename: str, size_bytes: int):

@@ -107,6 +107,7 @@ class PolicyCoverage(db.Model, TimestampMixin):
     not_covered_reason = db.Column(db.String(255))
 
     commitments = db.relationship("Commitment", cascade="all, delete-orphan")
+    principle = db.relationship("BrsrPrinciple")
     __table_args__ = (db.UniqueConstraint("entity_disclosure_id", "principle_id", name="uq_policy_principle"),)
 
 
@@ -128,6 +129,7 @@ class GovernanceReview(db.Model):
     principle_id = db.Column(db.Integer, db.ForeignKey("brsr_principles.id"), nullable=False)
     reviewed_by = db.Column(db.String(60), default="Committee of the Board")
     frequency = db.Column(db.String(30), default="Quarterly")
+    principle = db.relationship("BrsrPrinciple")
     __table_args__ = (db.UniqueConstraint("entity_disclosure_id", "principle_id", name="uq_review_principle"),)
 
 

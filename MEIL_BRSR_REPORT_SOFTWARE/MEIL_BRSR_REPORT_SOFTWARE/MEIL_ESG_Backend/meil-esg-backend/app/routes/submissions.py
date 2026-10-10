@@ -2,7 +2,10 @@ from datetime import datetime, timezone
 from flask import Blueprint, request, jsonify, g
 from app.extensions import db
 from app.models.base import CodeSequence
-from app.models.submission import EsgSubmission, EsgValue, SubmissionVersion, STATUS_DRAFT, STATUS_SUBMITTED, STATUS_CORRECTION_REQUIRED, STATUS_REJECTED
+from app.models.submission import (
+    EsgSubmission, EsgValue, SubmissionVersion, STATUS_DRAFT, STATUS_SUBMITTED,
+    STATUS_BU_VERIFIED, STATUS_CORRECTION_REQUIRED, STATUS_REJECTED,
+)
 from app.models.brsr import BrsrPrinciple, BrsrIndicator
 from app.models.organization import Project
 from app.schemas.submission import SaveSubmissionSchema
@@ -40,6 +43,7 @@ def _history_avg_lookup(project_id, indicator_code, before_period_id):
 @bp.get("")
 @authenticated
 def list_submissions():
+    from app.models.period import ReportingPeriod
     project_id = request.args.get("projectId")
     status = request.args.get("status")
     period_id = request.args.get("reportingPeriodId")
@@ -56,7 +60,9 @@ def list_submissions():
     if status:
         q = q.filter_by(status=status.upper())
     if period_id:
-        q = q.filter_by(reporting_period_id=period_id)
+        period_row = ReportingPeriod.query.get(period_id) or ReportingPeriod.query.filter_by(name=period_id).first()
+        period_db_id = period_row.id if period_row else period_id
+        q = q.filter_by(reporting_period_id=period_db_id)
     items, meta = paginate(q.order_by(EsgSubmission.updated_at.desc()))
     return jsonify({"items": [s.to_dict() for s in items], "meta": meta})
 
@@ -77,6 +83,7 @@ def get_submission(submission_id):
 @bp.post("")
 @project_scope_required(("projectId",))
 def save_submission():
+    from app.models.period import ReportingPeriod
     user = g.current_user
     data = SaveSubmissionSchema().load(request.get_json(force=True) or {})
     project = Project.query.get(data["projectId"])
@@ -86,17 +93,23 @@ def save_submission():
     if principle is None:
         raise ApiError("Unknown principle.", 404)
 
+    raw_period = data["reportingPeriodId"]
+    period_row = ReportingPeriod.query.get(raw_period) or ReportingPeriod.query.filter_by(name=raw_period).first()
+    if period_row is None:
+        raise ApiError(f"Unknown reporting period: {raw_period}", 404)
+    period_id = period_row.id
+
     sub = EsgSubmission.query.filter_by(
-        project_id=project.id, reporting_period_id=data["reportingPeriodId"], principle_id=principle.id
+        project_id=project.id, reporting_period_id=period_id, principle_id=principle.id
     ).first()
-    if sub and sub.status in ("SUBMITTED", "UNDER_REVIEW", "APPROVED", "LOCKED"):
+    if sub and not sub.is_editable():
         raise ApiError(f"This packet is already {sub.status.lower()} and cannot be edited here.", 409)
 
     is_new = sub is None
     if is_new:
         sub = EsgSubmission(
             submission_code=f"SUB-{CodeSequence.next('submission')}",
-            project_id=project.id, reporting_period_id=data["reportingPeriodId"], principle_id=principle.id,
+            project_id=project.id, reporting_period_id=period_id, principle_id=principle.id,
             status=STATUS_DRAFT, entered_by_role=user.role_codes()[0] if user.role_codes() else None,
         )
         db.session.add(sub)
@@ -105,7 +118,7 @@ def save_submission():
     indicators_by_code = {i.indicator_code: i for i in principle.indicators}
     validation = validate_submission_values(
         principle, data["values"],
-        history_avg_lookup=lambda code: _history_avg_lookup(project.id, code, data["reportingPeriodId"]),
+        history_avg_lookup=lambda code: _history_avg_lookup(project.id, code, period_id),
     )
     if data["submit"] and validation["errors"]:
         raise ApiError("Fix the flagged errors before submitting.", 422, details=validation["errors"], code="VALIDATION_FAILED")

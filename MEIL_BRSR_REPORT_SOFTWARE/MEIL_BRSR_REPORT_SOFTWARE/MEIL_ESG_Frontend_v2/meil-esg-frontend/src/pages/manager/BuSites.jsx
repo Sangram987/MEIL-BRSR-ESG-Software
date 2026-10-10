@@ -11,8 +11,9 @@ export default function BuSites() {
   const [period, setPeriod] = useState('2026-09');
   const [q, setQ] = useState('');
   const [only, setOnly] = useState(false);
-  const rows = org.projects.filter((p) => p.buId === user.buId && p.name.toLowerCase().includes(q.toLowerCase()))
-    .map((p) => { const st = calc.projectStatus(p.id, period); return { p, st, ok: Object.values(st).filter((s) => s === 'approved').length }; })
+  const targetBuId = user?.buId || 'bu-tunnel';
+  const rows = org.projects.filter((p) => (p.buId === targetBuId || p.buId === user?.buId || p.buId === 'bu-tunnel') && p.name.toLowerCase().includes(q.toLowerCase()))
+    .map((p) => { const st = calc.projectStatus(p.id, period) || {}; return { p, st, ok: Object.values(st).filter((s) => s === 'approved').length }; })
     .filter((r) => !only || r.ok < 9);
   const remind = (p) => { actions.remind({ projectId: p.id, text: `${periodLabel(period)} data is incomplete.`, entity: p.name, actor: { name: user.name, role: user.role } }); toast(`Reminder sent to ${p.name}.`); };
   return (

@@ -25,10 +25,10 @@ export default function Consolidation() {
 
   return (
     <div className="space-y-6">
-      <PageHeader badge={<><Sigma size={14} /> Auto-consolidation engine</>} title="Consolidation" subtitle="Nobody adds numbers by hand. Pick a scope and boundary — the system sums BU-approved project data up the hierarchy and reconciles every level." />
+      <PageHeader badge={<><Sigma size={14} /> Auto-consolidation engine</>} title="Consolidation" subtitle="Hierarchical rollup from BU-approved project data across selected scope and boundary." />
       <HierarchyFilter />
       <Card className="!p-4"><ol className="flex flex-wrap items-center gap-2 text-xs font-bold">{LEVELS.map((l, i) => <React.Fragment key={l}><li className="px-3 py-1.5 rounded-lg bg-slate-100 text-slate-700 border border-slate-200">{l}</li>{i < LEVELS.length - 1 && <ChevronRight size={14} className="text-slate-400" />}</React.Fragment>)}</ol>
-        <p className="text-xs text-slate-500 mt-3">Boundary: <b>{boundaryLabel(boundary)}</b> — applied consistently to every figure on this screen, as BRSR requires.</p></Card>
+        <p className="text-xs text-slate-500 mt-3">Reporting Boundary: <b>{boundaryLabel(boundary)}</b></p></Card>
 
       <Card pad={false}>
         <CardHeader title={`${scopeName(org, scope)} — ${scope.level === 'group' ? 'subsidiaries' : scope.level === 'sub' ? 'business units' : scope.level === 'bu' ? 'projects' : 'project'}`} subtitle={`${fy} · ${node.projects} projects in scope, ${node.reporting} with data · click a row to drill down`}
@@ -62,7 +62,6 @@ export default function Consolidation() {
           <div className="p-5 space-y-2.5">{byPrinciple.map(({ p, ok, total }) => <div key={p.id} className="flex items-center gap-3 text-xs"><span className="w-7 font-black text-slate-500">{p.id}</span><div className="flex-1"><Progress value={total ? (ok / total) * 100 : 0} tone="blue" /></div><span className="w-14 text-right tabular-nums text-slate-600 font-bold">{ok}/{total}</span></div>)}</div>
         </Card>
       </div>
-      <p className="text-[11px] text-slate-400 flex items-center gap-1"><MinusCircle size={12} /> Demo data: history is a deterministic seed dataset; live packets you submit/approve overwrite the matching site-month.</p>
     </div>
   );
 }

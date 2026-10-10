@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import {
-  LayoutDashboard, FileSpreadsheet, ClipboardCheck, FileDown, Menu, X, LogOut, Building2, Truck, ShieldAlert,
-  BrainCircuit, Sigma, BookMarked, ScrollText, Globe2, Store, MapPinned, ShieldCheck, Scale, Settings as Cog, Layers,
+  LayoutDashboard, FileSpreadsheet, ClipboardCheck, ClipboardList, FileDown, Menu, X, LogOut, Building2, Truck, ShieldAlert,
+  BrainCircuit, Sigma, BookMarked, ScrollText, Globe2, Store, MapPinned, ShieldCheck, Scale, Settings as Cog, Layers, Users,
 } from 'lucide-react';
 import { useApp } from '../store/AppStore';
 import { FYS, ROLE_META } from '../data/brsr';
@@ -11,30 +11,47 @@ import NotificationBell from './NotificationBell';
 // layer: 'brsr' = official SEBI disclosure, 'mgmt' = internal management add-on, 'integration' = workflow/data-collection layer
 const NAV = {
   admin: [
-    { to: '/admin', label: 'Command Center', icon: LayoutDashboard, end: true, layer: 'mgmt' },
+    { to: '/admin', label: 'Control Tower', icon: LayoutDashboard, end: true, layer: 'mgmt' },
+    { to: '/admin/approvals', label: 'Final Approvals Queue', icon: ClipboardCheck, layer: 'mgmt' },
+    { to: '/subsidiary', label: 'Subsidiary Governance', icon: Building2, layer: 'mgmt' },
     { to: '/admin/organization', label: 'Organization Tree', icon: Building2, layer: 'integration' },
     { to: '/admin/consolidation', label: 'Consolidation', icon: Sigma, layer: 'brsr' },
     { to: '/admin/brsr-mapping', label: 'BRSR Mapping', icon: BookMarked, layer: 'brsr' },
     { to: '/admin/disclosures', label: 'Section A & B', icon: ScrollText, layer: 'brsr' },
-    { to: '/admin/value-chain', label: 'Value Chain (Scope 3)', icon: Truck, layer: 'integration' },
-    { to: '/admin/risk-management', label: 'ESG Risk Matrix', icon: ShieldAlert, layer: 'mgmt' },
+    { to: '/admin/evidence-lineage', label: 'Evidence Lineage', icon: Layers, layer: 'integration' },
+    { to: '/admin/audit', label: 'Audit Center & Package', icon: ShieldCheck, layer: 'brsr' },
+    { to: '/admin/capa', label: 'CAPA Management', icon: ClipboardCheck, layer: 'mgmt' },
     { to: '/admin/sdg', label: 'SDG Alignment', icon: Globe2, layer: 'mgmt' },
-    { to: '/admin/ai-insights', label: 'AI Analytics', icon: BrainCircuit, layer: 'mgmt' },
+    { to: '/admin/ai-insights', label: 'AI & Anomaly Center', icon: BrainCircuit, layer: 'mgmt' },
     { to: '/admin/reports', label: 'SEBI BRSR Reports', icon: FileDown, layer: 'brsr' },
+    { to: '/admin/risk-management', label: 'ESG Risk Matrix', icon: ShieldAlert, layer: 'mgmt' },
+    { to: '/admin/value-chain', label: 'Scope 3 (Value Chain)', icon: Truck, layer: 'integration' },
+  ],
+  subsidiary: [
+    { to: '/subsidiary', label: 'Subsidiary Governance', icon: LayoutDashboard, end: true },
+    { to: '/subsidiary?tab=queue', label: 'Subsidiary Review Queue', icon: ClipboardList },
+    { to: '/subsidiary?tab=bus', label: 'Manage BU Managers', icon: Users },
+    { to: '/subsidiary?tab=analytics', label: 'Multi-BU Rollup & Trends', icon: Sigma },
   ],
   manager: [
-    { to: '/manager', label: 'BU Overview', icon: LayoutDashboard, end: true },
-    { to: '/manager/data-entry', label: 'Site Data Entry', icon: FileSpreadsheet },
-    { to: '/manager/approvals', label: 'Review & Approvals', icon: ClipboardCheck },
-    { to: '/manager/sites', label: 'BU Sites', icon: MapPinned },
+    { to: '/review', label: 'BU Manager Verification', icon: LayoutDashboard, end: true },
+    { to: '/manager/approvals', label: 'BU Approvals Queue', icon: ClipboardCheck },
+    { to: '/review?tab=queue', label: 'Review Queue', icon: ClipboardList },
+    { to: '/review?tab=anomalies', label: 'Potential Anomalies', icon: ShieldAlert },
+    { to: '/review?tab=evidence', label: 'Evidence Review', icon: Layers },
+    { to: '/review?tab=verification', label: '5-Agent Verification', icon: BrainCircuit },
+    { to: '/review?tab=capa', label: 'Division CAPA', icon: ClipboardCheck },
+    { to: '/review?tab=sites', label: 'Project Sites', icon: MapPinned },
   ],
   auditor: [
-    { to: '/auditor', label: 'Assessment / Assurance', icon: ShieldCheck, end: true },
-    { to: '/auditor/vendors', label: 'Vendor Data Review', icon: Store },
-    { to: '/auditor/opinions', label: 'Opinions', icon: Scale },
+    { to: '/admin/audit', label: 'Audit Center (Read Only)', icon: ShieldCheck, end: true },
+    { to: '/admin/evidence-lineage', label: 'Evidence Lineage', icon: Layers },
+    { to: '/admin/reports', label: 'SEBI Filing & Hash', icon: FileDown },
+    { to: '/admin/capa', label: 'CAPA History', icon: ClipboardCheck },
+    { to: '/admin/consolidation', label: 'Roll-up Trace', icon: Sigma },
   ],
-  operator: [{ to: '/operator', label: 'Site Home', icon: LayoutDashboard, end: true }],
-  vendor: [{ to: '/vendor', label: 'Vendor Home', icon: LayoutDashboard, end: true }],
+  operator: [{ to: '/engineer', label: 'Site Engineer Home', icon: LayoutDashboard, end: true }],
+  vendor: [{ to: '/admin/value-chain', label: 'Scope 3 Value Chain', icon: Truck, end: true }],
 };
 const LAYER_DOT = { brsr: 'bg-indigo-500', mgmt: 'bg-amber-500', integration: 'bg-sky-500' };
 const LAYER_LABEL = { brsr: 'Official BRSR disclosure', mgmt: 'Management add-on', integration: 'Workflow / data layer' };
@@ -70,16 +87,11 @@ export default function Layout() {
           <nav className="p-3 space-y-1 mt-2">
             {!collapsed && <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2 px-3">{ROLE_META[user.role].label} workspace</div>}
             {links.map((l) => (
-              <NavLink key={l.to} to={l.to} end={l.end} onClick={() => setMobile(false)} title={collapsed ? l.label : (l.layer ? LAYER_LABEL[l.layer] : '')}
+              <NavLink key={l.to} to={l.to} end={l.end} onClick={() => setMobile(false)} title={l.label}
                 className={({ isActive }) => `flex items-center rounded-lg text-sm font-semibold transition ${collapsed ? 'justify-center p-3' : 'gap-3 px-3 py-2.5'} ${isActive ? 'bg-blue-50 text-blue-700 border border-blue-100' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900 border border-transparent'}`}>
-                <l.icon size={collapsed ? 22 : 18} />{!collapsed && <span className="whitespace-nowrap flex-1">{l.label}</span>}{!collapsed && l.layer && <span className={`h-1.5 w-1.5 rounded-full shrink-0 ${LAYER_DOT[l.layer]}`} />}
+                <l.icon size={collapsed ? 22 : 18} />{!collapsed && <span className="whitespace-nowrap flex-1">{l.label}</span>}
               </NavLink>
             ))}
-            {!collapsed && user.role === 'admin' && (
-              <div className="px-3 pt-3 pb-1 flex flex-wrap gap-x-3 gap-y-1 text-[10px] text-slate-400 font-semibold">
-                {Object.entries(LAYER_LABEL).map(([k, l]) => <span key={k} className="flex items-center gap-1"><span className={`h-1.5 w-1.5 rounded-full ${LAYER_DOT[k]}`} />{l}</span>)}
-              </div>
-            )}
             <NavLink to="/settings" onClick={() => setMobile(false)} title="Settings" className={({ isActive }) => `flex items-center rounded-lg text-sm font-semibold transition mt-3 ${collapsed ? 'justify-center p-3' : 'gap-3 px-3 py-2.5'} ${isActive ? 'bg-blue-50 text-blue-700 border border-blue-100' : 'text-slate-500 hover:bg-slate-50 border border-transparent'}`}>
               <Cog size={collapsed ? 22 : 18} />{!collapsed && 'Settings'}
             </NavLink>

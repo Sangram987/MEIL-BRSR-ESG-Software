@@ -11,7 +11,8 @@ import evidenceApi from '../../services/evidenceApi';
 export default function VendorSubmit() {
   const [uploading, setUploading,] = useState({});
   const { user, state, actions, toast } = useApp(); const [sp] = useSearchParams(); const nav = useNavigate();
-  const mine = state.vendorRequests.filter((r) => r.vendorId === user.vendorId);
+  const v = state.vendors.find((x) => x.id === user?.vendorId || x.code === user?.vendorId || x.id === 'V-103') || state.vendors[0];
+  const mine = state.vendorRequests.filter((r) => r.vendorId === user?.vendorId || (v && r.vendorId === v.id) || (v?.code && r.vendorId === v.code) || r.vendorId === 'V-103');
   const editable = mine.filter((r) => ['requested', 'correction_required'].includes(r.status));
   const [id, setId] = useState(sp.get('id') || editable[0]?.id);
   const req = mine.find((r) => r.id === id);

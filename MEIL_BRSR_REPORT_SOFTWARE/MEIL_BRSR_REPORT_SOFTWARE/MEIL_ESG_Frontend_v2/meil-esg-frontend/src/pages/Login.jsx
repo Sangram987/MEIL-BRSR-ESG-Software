@@ -1,16 +1,26 @@
 import React, { useState } from 'react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
-import { Shield, Users, HardHat, Truck, ShieldCheck, ArrowLeft, RotateCcw, Eye, EyeOff, LockKeyhole, Leaf, LoaderCircle } from 'lucide-react';
+import { Shield, Users, HardHat, Truck, ShieldCheck, ArrowLeft, RotateCcw, Eye, EyeOff, LockKeyhole, Leaf, LoaderCircle, Building2 } from 'lucide-react';
 import { useApp } from '../store/AppStore';
 import { ROLE_META } from '../data/brsr';
 
 const ROLES = [
-  { id: 'admin', icon: Shield, accent: 'text-emerald-800 bg-emerald-100', text: 'Group reporting, BRSR mapping and consolidated disclosures.' },
-  { id: 'manager', icon: Users, accent: 'text-sky-800 bg-sky-100', text: 'Review site submissions, evidence and approvals.' },
-  { id: 'operator', icon: HardHat, accent: 'text-amber-800 bg-amber-100', text: 'Enter site ESG data and submit supporting evidence.' },
-  { id: 'vendor', icon: Truck, accent: 'text-orange-800 bg-orange-100', text: 'Respond to MEIL value-chain data requests.' },
-  { id: 'auditor', icon: ShieldCheck, accent: 'text-teal-800 bg-teal-100', text: 'Assure approved BRSR Core data and vendor submissions.' },
+  { id: 'operator', icon: HardHat, accent: 'text-emerald-800 bg-emerald-100', text: 'Site Engineer: Ingest mobile evidence and self-reported metrics.' },
+  { id: 'manager', icon: Users, accent: 'text-sky-800 bg-sky-100', text: 'BU Manager: Review and verify site submissions for your Business Unit.' },
+  { id: 'subsidiary', icon: Building2, accent: 'text-indigo-800 bg-indigo-100', text: 'Subsidiary Governance: Manage all BU Managers & verify divisional data before Admin.' },
+  { id: 'admin', icon: Shield, accent: 'text-purple-800 bg-purple-100', text: 'Group ESG Control Tower: Multi-site governance, consolidation & BRSR reports.' },
+  { id: 'auditor', icon: ShieldCheck, accent: 'text-teal-800 bg-teal-100', text: 'Auditor (Read-Only): Pre-assurance inspection access to evidence vault.' },
+  { id: 'vendor', icon: Truck, accent: 'text-orange-800 bg-orange-100', text: 'Value Chain: Scope 3 supplier data connector.' },
 ];
+
+const DEMO_CREDENTIALS = {
+  operator: { name: 'Suresh Naik', email: 's.naik@meil.in', password: 'Password123', label: 'Site Engineer' },
+  manager: { name: 'Vikram Singh', email: 'v.singh@meil.in', password: 'Password123', label: 'BU Manager (Tunnels & Transit)' },
+  subsidiary: { name: 'Priya Sharma', email: 'p.sharma@meil.in', password: 'Password123', label: 'Subsidiary Head (Infrastructure & Utilities)' },
+  admin: { name: 'Rajesh Kumar', email: 'r.kumar@meil.in', password: 'Password123', label: 'Group Control Tower' },
+  auditor: { name: 'Ananya Rao', email: 'a.rao@assurance.example', password: 'Password123', label: 'Auditor (Read Only)' },
+  vendor: { name: 'Anil Mehta', email: 'anil@globallogistics.example', password: 'Password123', label: 'Value Chain Vendor' },
+};
 
 export default function Login() {
   const { actions, auth, toast } = useApp();
@@ -18,15 +28,34 @@ export default function Login() {
   const loc = useLocation();
   const routeRole = Object.keys(ROLE_META).find((id) => loc.pathname === ROLE_META[id].home || loc.pathname.startsWith(`${ROLE_META[id].home}/`));
   const requestedRole = loc.state?.role || Object.keys(ROLE_META).find((id) => loc.state?.from === ROLE_META[id].home || loc.state?.from?.startsWith(`${ROLE_META[id].home}/`)) || routeRole;
-  const [role, setRole] = useState(requestedRole || 'admin');
+  const initialRole = requestedRole || 'admin';
+  const [role, setRole] = useState(initialRole);
   const [mode, setMode] = useState('login');
   const [showPassword, setShowPassword] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [recoveryMessage, setRecoveryMessage] = useState('');
-  const [form, setForm] = useState({ name: '', email: '', password: '', confirmPassword: '' });
-  const selected = ROLES.find((item) => item.id === role);
+  const [form, setForm] = useState({
+    name: DEMO_CREDENTIALS[initialRole]?.name || '',
+    email: DEMO_CREDENTIALS[initialRole]?.email || '',
+    password: DEMO_CREDENTIALS[initialRole]?.password || '',
+    confirmPassword: DEMO_CREDENTIALS[initialRole]?.password || '',
+  });
+  const selected = ROLES.find((item) => item.id === role) || ROLES[0];
   const RoleIcon = selected.icon;
+
+  const selectDemoRole = (roleKey) => {
+    setRole(roleKey);
+    setError('');
+    const creds = DEMO_CREDENTIALS[roleKey];
+    if (creds && mode === 'login') {
+      setForm((prev) => ({
+        ...prev,
+        email: creds.email,
+        password: creds.password,
+      }));
+    }
+  };
 
   const finishLogin = () => {
     const from = loc.state?.from;
@@ -61,8 +90,10 @@ export default function Login() {
     } catch (authError) {
       setError(
         authError.message ||
-        'Unable to authenticate. Please try again.'
+        'Unable to authenticate. Please check your credentials.'
       );
+    } finally {
+      setBusy(false);
     }
   };
 
@@ -78,9 +109,8 @@ export default function Login() {
           </div>
           <div className="relative z-10 max-w-md pb-8">
             <div className="mb-6 flex h-14 w-14 items-center justify-center rounded-2xl border border-white/20 bg-white/10 text-[#d8f36a]"><Leaf size={26} /></div>
-            <p className="mb-4 text-xs font-bold uppercase text-[#d8f36a]">Responsible growth, built together</p>
             <h1 className="text-4xl font-semibold leading-tight xl:text-5xl">Every site.<br />One clear picture.</h1>
-            <p className="mt-5 max-w-sm text-sm leading-6 text-white/75">A shared workspace for the people who collect, review and assure our sustainability data.</p>
+            <p className="mt-4 max-w-sm text-sm leading-6 text-white/75">Automated evidence-to-BRSR pipeline for MEIL.</p>
           </div>
           <div className="relative z-10 flex items-center justify-between border-t border-white/20 pt-5 text-xs text-white/55"><span>MEIL Sustainability Reporting</span><span>FY 2026–27</span></div>
         </section>
@@ -97,7 +127,7 @@ export default function Login() {
             <h2 className="text-3xl font-bold tracking-tight text-slate-900">{mode === 'login' ? 'Welcome back' : mode === 'register' ? 'Create your account' : 'Reset your password'}</h2>
             <p className="mt-2 text-sm leading-6 text-slate-500">{mode === 'forgot' ? 'Enter your work email to get help recovering access to your account.' : selected.text}</p>
 
-            {(!requestedRole || mode === 'register') && mode !== 'forgot' && <label className="mt-6 block text-sm font-semibold text-slate-700">{mode === 'register' ? 'Register as' : 'Portal'}<select value={role} onChange={(event) => { setRole(event.target.value); setError(''); }} className="mt-2 h-11 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-800 outline-none transition focus:border-[#527367] focus:ring-2 focus:ring-[#527367]/15">{ROLES.map((item) => <option key={item.id} value={item.id}>{ROLE_META[item.id].label}</option>)}</select></label>}
+            {(!requestedRole || mode === 'register') && mode !== 'forgot' && <label className="mt-6 block text-sm font-semibold text-slate-700">{mode === 'register' ? 'Register as' : 'Portal'}<select value={role} onChange={(event) => selectDemoRole(event.target.value)} className="mt-2 h-11 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-800 outline-none transition focus:border-[#527367] focus:ring-2 focus:ring-[#527367]/15">{ROLES.map((item) => <option key={item.id} value={item.id}>{ROLE_META[item.id].label}</option>)}</select></label>}
 
             {mode !== 'forgot' && <div className="mt-6 grid grid-cols-2 rounded-lg bg-slate-100 p-1" role="tablist" aria-label="Authentication mode">
               {[['login', 'Sign in'], ['register', 'Register']].map(([value, label]) => <button key={value} type="button" role="tab" aria-selected={mode === value} onClick={() => { setMode(value); setError(''); }} className={`h-10 rounded-md text-sm font-semibold transition ${mode === value ? 'bg-white text-[#123d34] shadow-sm' : 'text-slate-500 hover:text-slate-800'}`}>{label}</button>)}
@@ -117,6 +147,32 @@ export default function Login() {
               {recoveryMessage && <p role="status" className="rounded-lg border border-amber-200 bg-amber-50 px-3.5 py-3 text-sm font-medium text-amber-800">{recoveryMessage}</p>}
               <button disabled={busy} type="submit" className="flex h-12 w-full items-center justify-center gap-2 rounded-lg bg-[#123d34] px-4 text-sm font-bold text-white transition hover:bg-[#1b594b] disabled:cursor-wait disabled:opacity-70">{busy ? <LoaderCircle size={17} className="animate-spin" /> : <LockKeyhole size={16} />}{mode === 'login' ? 'Sign in to portal' : mode === 'register' ? 'Create account' : 'Request password help'}</button>
             </form>
+
+            {mode === 'login' && (
+              <div className="mt-5 pt-4 border-t border-slate-100">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Quick Demo Logins</span>
+                  <span className="text-[11px] text-slate-400 font-medium">Password123</span>
+                </div>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
+                  {Object.entries(DEMO_CREDENTIALS).map(([k, v]) => (
+                    <button
+                      key={k}
+                      type="button"
+                      onClick={() => selectDemoRole(k)}
+                      className={`px-2.5 py-1.5 text-xs font-semibold rounded-lg transition border text-left truncate ${
+                        role === k
+                          ? 'bg-[#123d34] text-white border-[#123d34] shadow-sm'
+                          : 'bg-slate-50 text-slate-700 border-slate-200 hover:border-slate-300 hover:bg-slate-100'
+                      }`}
+                      title={`${v.label} (${v.email})`}
+                    >
+                      {v.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {mode === 'forgot' && <button type="button" onClick={() => { setMode('login'); setError(''); setRecoveryMessage(''); }} className="mt-5 w-full text-center text-sm font-semibold text-[#527367] transition hover:text-[#123d34]">Back to sign in</button>}
             <p className="mt-5 text-center text-[11px] leading-5 text-slate-400">Local demo authentication only. Use a server-backed identity provider before production.</p>

@@ -1,22 +1,23 @@
 import { PRINCIPLES, CORE_ATTRS, CORE8_FAIRNESS, CORE9_OPENNESS, INDICATORS, prevFY, SDGS, STAKEHOLDER_GROUPS, vendorEmissions, vendorShare } from '../data/brsr';
 import { fmt } from './consolidate';
 
-export const scopeName = (org, scope) => {
-  if (scope.level === 'group') return org.group.name;
-  if (scope.level === 'sub') return org.subsidiaries.find((s) => s.id === scope.id)?.name || scope.id;
-  if (scope.level === 'bu') return org.bus.find((b) => b.id === scope.id)?.name || scope.id;
-  return org.projects.find((p) => p.id === scope.id)?.name || scope.id;
+export const scopeName = (org = {}, scope = {}) => {
+  if (scope.level === 'group') return org.group?.name || org.name || 'MEIL Group';
+  if (scope.level === 'sub') return org.subsidiaries?.find((s) => s.id === scope.id)?.name || scope.id;
+  if (scope.level === 'bu') return org.bus?.find((b) => b.id === scope.id)?.name || scope.id;
+  return org.projects?.find((p) => p.id === scope.id)?.name || scope.id;
 };
 export const boundaryLabel = (b) => (b.mode === 'standalone' ? 'Standalone (parent entity only)' : `Consolidated (parent + subsidiaries${b.includeJV ? ' + JVs' : ''})`);
 export const packageLabel = (rc) => `${rc.package === 'core' ? 'BRSR Core (subset)' : 'Comprehensive BRSR'}${rc.includeValueChain ? ' + value-chain' : ''} · ${rc.disclosureType === 'assurance' ? 'Assurance' : rc.disclosureType === 'assessment' ? 'Assessment' : 'Not applicable'}`;
 
-export function buildReportModel({ calc, state, fy, scope, boundary, reportConfig }) {
+export function buildReportModel({ calc, state, fy, scope, boundary, reportConfig = {} }) {
   const { org } = calc; const pfy = prevFY(fy);
   const cur = calc.nodeTotals(scope, fy, boundary), prev = calc.nodeTotals(scope, pfy, boundary);
-  const corePrincipleOnly = reportConfig.package === 'core';
+  const cfg = reportConfig || { package: 'comprehensive', includeValueChain: true, disclosureType: 'assurance' };
+  const corePrincipleOnly = cfg.package === 'core';
   const principles = PRINCIPLES.map((p) => ({
     id: p.id, label: p.label, sdg: p.sdg,
-    rows: p.indicators.filter((i) => !corePrincipleOnly || i.core).map((i) => ({ id: i.id, label: i.label.trim(), unit: i.unit, essential: !i.lead, core: i.core || '', cur: cur.t[i.id], prev: prev.t[i.id] })),
+    rows: p.indicators.filter((i) => !corePrincipleOnly || i.core).map((i) => ({ id: i.id, label: i.label.trim(), unit: i.unit, essential: !i.lead, core: i.core || '', cur: cur?.t?.[i.id], prev: prev?.t?.[i.id] })),
   })).filter((p) => !corePrincipleOnly || p.rows.length);
   const K = cur.kpi, Kp = prev.kpi; const ops = state.assuranceOpinions[fy] || {}; const c8 = state.disclosures.core8 || {}; const c9 = state.disclosures.core9 || {};
   const m = (label, unit, key, d = 1) => ({ label, unit, cur: K[key], prev: Kp[key], d });
@@ -37,12 +38,33 @@ export function buildReportModel({ calc, state, fy, scope, boundary, reportConfi
   const s3v = vend.reduce((acc, r) => acc + vendorEmissions(r.values) * vendorShare(r.values), 0);
   return {
     meta: {
-      entity: org.group.name, scopeLabel: scopeName(org, scope), fy, boundary: boundaryLabel(boundary),
-      package: reportConfig.package, disclosureType: reportConfig.disclosureType, includeValueChain: reportConfig.includeValueChain,
-      packageLabel: packageLabel(reportConfig), generatedAt: new Date().toISOString(), projects: cur.projects, reporting: cur.reporting, turnoverCr: cur.turnoverCr,
+      entity: org?.group?.name || org?.name || 'Megha Engineering & Infrastructures Limited',
+      scopeLabel: scopeName(org, scope),
+      fy,
+      boundary: boundaryLabel(boundary || {}),
+      package: cfg.package,
+      disclosureType: cfg.disclosureType,
+      includeValueChain: cfg.includeValueChain,
+      packageLabel: packageLabel(cfg),
+      generatedAt: new Date().toISOString(),
+      projects: cur?.projects || 0,
+      reporting: cur?.reporting || 0,
+      turnoverCr: cur?.turnoverCr || 0,
     },
-    sectionA: state.disclosures.A, sectionB: state.disclosures.B, principles, core, kpi: K, kpiPrev: Kp,
-    valueChain: reportConfig.includeValueChain ? { acceptedVendors: vend.length, scope3Allocated: s3v, methodologyNote: state.valueChainConfig.methodologyNote, applicability: state.valueChainConfig.applicability } : null,
+    sectionA: state?.disclosures?.A || {},
+    sectionB: state?.disclosures?.B || {},
+    principles,
+    core,
+    kpi: K,
+    kpiPrev: Kp,
+    valueChain: cfg.includeValueChain
+      ? {
+          acceptedVendors: vend.length,
+          scope3Allocated: s3v,
+          methodologyNote: state?.valueChainConfig?.methodologyNote || '',
+          applicability: state?.valueChainConfig?.applicability || 'voluntary_top250',
+        }
+      : null,
   };
 }
 

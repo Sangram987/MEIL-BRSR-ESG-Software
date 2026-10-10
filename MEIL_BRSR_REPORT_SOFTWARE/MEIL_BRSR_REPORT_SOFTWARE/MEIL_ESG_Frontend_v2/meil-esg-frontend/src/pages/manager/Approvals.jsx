@@ -15,6 +15,7 @@ import {
   Search,
   AlertTriangle,
   FileWarning,
+  Layers,
 } from 'lucide-react';
 
 import {
@@ -66,6 +67,9 @@ const STATUS_MAP = {
   DRAFT: 'draft',
   SUBMITTED: 'submitted',
   UNDER_REVIEW: 'under_review',
+  BU_VERIFIED: 'bu_verified',
+  SUBSIDIARY_VERIFIED: 'subsidiary_verified',
+  SUB_VERIFIED: 'subsidiary_verified',
   CORRECTION_REQUIRED: 'correction_required',
   REJECTED: 'rejected',
   APPROVED: 'approved',
@@ -578,20 +582,29 @@ function ReviewModal({
         setDeciding(true);
 
 
-        if (
-          decision === 'approve'
-        ) {
-          await approvalsApi.approveSubmission(
-            submission.id,
-            comment.trim(),
-            checks
-          );
+        if (decision === 'approve') {
+          if (submission.status === 'subsidiary_verified') {
+            await approvalsApi.approveSubmission(
+              submission.id,
+              comment.trim(),
+              checks
+            );
+          } else if (submission.status === 'bu_verified') {
+            await approvalsApi.verifySubsidiarySubmission(
+              submission.id,
+              comment.trim(),
+              checks
+            );
+          } else {
+            await approvalsApi.verifySubmission(
+              submission.id,
+              comment.trim(),
+              checks
+            );
+          }
         }
 
-
-        if (
-          decision === 'correction'
-        ) {
+        if (decision === 'correction') {
           await approvalsApi.requestCorrection(
             submission.id,
             comment.trim(),
@@ -599,26 +612,25 @@ function ReviewModal({
           );
         }
 
-
-        if (
-          decision === 'reject'
-        ) {
+        if (decision === 'reject') {
           await approvalsApi.rejectSubmission(
             submission.id,
             comment.trim()
           );
         }
 
-
         const messages = {
           approve:
-            `${submission.code} approved successfully.`,
+            submission.status === 'subsidiary_verified'
+              ? `${submission.code} granted final Admin approval and locked.`
+              : submission.status === 'bu_verified'
+              ? `${submission.code} verified by Subsidiary Head and forwarded to Admin.`
+              : `${submission.code} verified by BU Manager and forwarded to Subsidiary.`,
           correction:
             `${submission.code} sent back to the site operator for correction.`,
           reject:
             `${submission.code} rejected successfully.`,
         };
-
 
         toast(
           messages[decision]
@@ -747,7 +759,11 @@ function ReviewModal({
               <Check size={16} />
               {deciding
                 ? 'Saving…'
-                : 'Approve'}
+                : submission.status === 'subsidiary_verified'
+                ? 'Admin Final Approve & Lock'
+                : submission.status === 'bu_verified'
+                ? 'Subsidiary Verify & Forward to Admin'
+                : 'BU Verify & Forward to Subsidiary'}
             </Btn>
           </>
         }
@@ -1184,6 +1200,8 @@ export default function Approvals() {
 
         const [
           approvalResponse,
+          subsidiaryVerifiedResponse,
+          verifiedResponse,
           correctionResponse,
           rejectedResponse,
           approvedResponse,
@@ -1193,6 +1211,28 @@ export default function Approvals() {
           // Pending review
           apiClient.get(
             '/approvals'
+          ),
+
+          // Subsidiary Verified (Awaiting Admin)
+          apiClient.get(
+            '/submissions',
+            {
+              params: {
+                status:
+                  'SUBSIDIARY_VERIFIED',
+              },
+            }
+          ),
+
+          // BU Verified (Awaiting Subsidiary)
+          apiClient.get(
+            '/submissions',
+            {
+              params: {
+                status:
+                  'BU_VERIFIED',
+              },
+            }
           ),
 
           // Returned to site
@@ -1258,6 +1298,26 @@ export default function Approvals() {
           );
 
 
+        const subsidiaryVerifiedRows =
+          (
+            subsidiaryVerifiedResponse
+              .data?.items ||
+            []
+          ).map(
+            normalizeSubmission
+          );
+
+
+        const verifiedRows =
+          (
+            verifiedResponse
+              .data?.items ||
+            []
+          ).map(
+            normalizeSubmission
+          );
+
+
         const correctionRows =
           (
             correctionResponse
@@ -1300,6 +1360,8 @@ export default function Approvals() {
 
         const combined = [
           ...queueRows,
+          ...subsidiaryVerifiedRows,
+          ...verifiedRows,
           ...correctionRows,
           ...rejectedRows,
           ...approvedRows,
@@ -1472,13 +1534,54 @@ export default function Approvals() {
 
   const queue =
     mine
+      .filter((submission) => {
+        if (user?.role === 'admin') {
+          return (
+            submission.status === 'subsidiary_verified' ||
+            submission.status === 'sub_verified'
+          );
+        }
+        if (user?.role === 'subsidiary') {
+          return submission.status === 'bu_verified';
+        }
+        return submission.status === 'submitted';
+      })
+      .filter(matches);
+
+  const pendingBu =
+    mine
       .filter(
         (submission) =>
-          submission.status ===
-          'submitted'
+          submission.status === 'submitted'
       )
       .filter(matches);
 
+  const pendingSub =
+    mine
+      .filter(
+        (submission) =>
+          submission.status === 'bu_verified'
+      )
+      .filter(matches);
+
+  const verified =
+    mine
+      .filter(
+        (submission) =>
+          submission.status === 'bu_verified' ||
+          submission.status === 'subsidiary_verified' ||
+          submission.status === 'sub_verified'
+      )
+      .filter(matches);
+
+  const subsidiaryVerified =
+    mine
+      .filter(
+        (submission) =>
+          submission.status === 'subsidiary_verified' ||
+          submission.status === 'sub_verified'
+      )
+      .filter(matches);
 
   const away =
     mine
@@ -1492,7 +1595,6 @@ export default function Approvals() {
           )
       )
       .filter(matches);
-
 
   const done =
     mine
@@ -1860,13 +1962,54 @@ export default function Approvals() {
           {
             id: 'queue',
             label:
-              'Pending review',
+              user?.role === 'admin'
+                ? 'Awaiting Admin Approval'
+                : user?.role === 'subsidiary'
+                ? 'Awaiting Subsidiary Review'
+                : 'Pending BU Verification',
             icon:
               ClipboardList,
             count:
               queue.length,
           },
-
+          ...(user?.role === 'admin'
+            ? [
+                {
+                  id: 'pending_sub',
+                  label: 'With Subsidiary',
+                  icon: Layers,
+                  count: pendingSub.length,
+                },
+                {
+                  id: 'pending_bu',
+                  label: 'With BU Manager',
+                  icon: RotateCcw,
+                  count: pendingBu.length,
+                },
+              ]
+            : user?.role === 'subsidiary'
+            ? [
+                {
+                  id: 'verified',
+                  label: 'Forwarded to Admin',
+                  icon: Check,
+                  count: subsidiaryVerified.length,
+                },
+                {
+                  id: 'pending_bu',
+                  label: 'With BU Manager',
+                  icon: RotateCcw,
+                  count: pendingBu.length,
+                },
+              ]
+            : [
+                {
+                  id: 'verified',
+                  label: 'Verified (Sent to Admin)',
+                  icon: Check,
+                  count: verified.length,
+                },
+              ]),
           {
             id: 'away',
             label:
@@ -1876,17 +2019,15 @@ export default function Approvals() {
             count:
               away.length,
           },
-
           {
             id: 'done',
             label:
-              'Approved',
+              'Final Approved',
             icon:
               Check,
             count:
               done.length,
           },
-
           {
             id: 'audit',
             label:
@@ -1988,7 +2129,13 @@ export default function Approvals() {
               0 ? (
                 <Empty
                   title="Queue is clear"
-                  text="There are no pending submissions in your accessible business-unit scope."
+                  text={
+                    user?.role === 'admin'
+                      ? 'There are no submissions currently awaiting final Admin sign-off from subsidiaries.'
+                      : user?.role === 'subsidiary'
+                      ? 'There are no submissions currently awaiting Subsidiary verification from BU Managers.'
+                      : 'There are no pending submissions in your accessible business-unit scope.'
+                  }
                 />
               ) : (
                 <Table
@@ -2009,6 +2156,46 @@ export default function Approvals() {
                       />
                     )
                   )}
+                </Table>
+              )}
+            </Card>
+          )}
+
+          {(tab === 'verified' || tab === 'pending_bu' || tab === 'pending_sub') && (
+            <Card pad={false}>
+              {(tab === 'verified'
+                ? (user?.role === 'subsidiary' ? subsidiaryVerified : verified)
+                : tab === 'pending_sub'
+                ? pendingSub
+                : pendingBu
+              ).length === 0 ? (
+                <Empty
+                  title={
+                    tab === 'verified'
+                      ? (user?.role === 'subsidiary' ? 'No packets forwarded to Admin yet' : 'No packets verified yet')
+                      : tab === 'pending_sub'
+                      ? 'No packets currently with Subsidiary'
+                      : 'No packets currently with BU Manager'
+                  }
+                />
+              ) : (
+                <Table head={head}>
+                  {(tab === 'verified'
+                    ? (user?.role === 'subsidiary' ? subsidiaryVerified : verified)
+                    : tab === 'pending_sub'
+                    ? pendingSub
+                    : pendingBu
+                  ).map((submission) => (
+                    <Row
+                      key={submission.id}
+                      submission={submission}
+                      cta={
+                        (user?.role === 'admin' && tab === 'pending_sub')
+                          ? 'Review'
+                          : 'Details'
+                      }
+                    />
+                  ))}
                 </Table>
               )}
             </Card>
@@ -2097,9 +2284,15 @@ export default function Approvals() {
 
 
       {/* Review detail */}
-      {openSubmission && (
-        openSubmission.status ===
-          'submitted' ? (
+      {openSubmission && (() => {
+        const canReview =
+          tab === 'queue' ||
+          (user?.role === 'admin' && ['subsidiary_verified', 'sub_verified', 'bu_verified'].includes(openSubmission.status)) ||
+          (user?.role === 'subsidiary' && openSubmission.status === 'bu_verified') ||
+          (user?.role === 'manager' && openSubmission.status === 'submitted') ||
+          openSubmission.status === 'submitted';
+
+        return canReview ? (
           <ReviewModal
             key={
               openSubmission.id
@@ -2228,8 +2421,8 @@ export default function Approvals() {
             )}
 
           </Modal>
-        )
-      )}
+        );
+      })()}
 
     </div>
   );

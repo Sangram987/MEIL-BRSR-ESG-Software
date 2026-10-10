@@ -15,6 +15,8 @@ class SaveSubmissionSchema(Schema):
 
 
 class ReviewSubmissionSchema(Schema):
-    decision = fields.Str(required=True, validate=validate.OneOf(["APPROVE", "REJECT", "REQUEST_CORRECTION"]))
+    decision = fields.Str(required=True, validate=validate.OneOf([
+        "APPROVE", "VERIFY", "BU_VERIFY", "SUB_VERIFY", "SUBSIDIARY_VERIFY", "REJECT", "REQUEST_CORRECTION"
+    ]))
     comment = fields.Str(load_default="")
     checklist = fields.Dict(load_default=dict)

@@ -17,9 +17,10 @@ export const riskApi = {
       if (filters.status) params.status = filters.status;
       
       const response = await apiClient.get('/risks', { params });
-      return (response.data.items || []).map(mapRisk);
+      const items = Array.isArray(response.data) ? response.data : (response.data.items || []);
+      return items.map(mapRisk);
     } catch (error) {
-      const message = error.response?.data?.error?.message || 'Failed to fetch risks.';
+      const message = error.response?.data?.error?.message || error.response?.data?.message || 'Failed to fetch risks.';
       throw new Error(message);
     }
   },
@@ -32,7 +33,7 @@ export const riskApi = {
       const response = await apiClient.get(`/risks/${riskId}`);
       return mapRisk(response.data);
     } catch (error) {
-      const message = error.response?.data?.error?.message || 'Failed to fetch risk.';
+      const message = error.response?.data?.error?.message || error.response?.data?.message || 'Failed to fetch risk.';
       throw new Error(message);
     }
   },
@@ -40,17 +41,24 @@ export const riskApi = {
   /**
    * Create a new risk
    */
-  async createRisk(name, category, type, data = {}) {
+  async createRisk(nameOrPayload, category, type, data = {}) {
     try {
-      const response = await apiClient.post('/risks', {
-        name,
-        category,
-        type,
-        ...data,
-      });
+      let payload;
+      if (typeof nameOrPayload === 'object' && nameOrPayload !== null) {
+        payload = nameOrPayload;
+      } else {
+        payload = {
+          title: nameOrPayload,
+          name: nameOrPayload,
+          category,
+          type,
+          ...data,
+        };
+      }
+      const response = await apiClient.post('/risks', payload);
       return mapRisk(response.data);
     } catch (error) {
-      const message = error.response?.data?.error?.message || 'Failed to create risk.';
+      const message = error.response?.data?.error?.message || error.response?.data?.message || 'Failed to create risk.';
       throw new Error(message);
     }
   },

@@ -1,0 +1,32 @@
+# Environment secrets
+.env
+.env.*
+!.env.example
+
+# Python cache & runtime
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+.venv/
+ENV/
+
+# Testing & coverage
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Local databases & uploads
+instance/
+uploads/
+*.db
+*.sqlite3
+
+# OS / Editor artifacts
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

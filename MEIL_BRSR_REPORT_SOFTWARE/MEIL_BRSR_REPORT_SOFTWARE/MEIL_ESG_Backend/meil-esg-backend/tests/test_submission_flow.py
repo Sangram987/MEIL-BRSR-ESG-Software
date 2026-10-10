@@ -14,7 +14,7 @@ def _get_project_and_period(client, token):
     return zojila, month
 
 
-def test_full_workflow_submit_correct_resubmit_approve(client, operator_token, manager_token):
+def test_full_workflow_submit_correct_resubmit_approve(client, operator_token, manager_token, subsidiary_token, admin_token):
     project, period = _get_project_and_period(client, operator_token)
 
     # 1) Operator saves a draft for P2 with an out-of-range value to trigger a validation error on submit
@@ -52,29 +52,58 @@ def test_full_workflow_submit_correct_resubmit_approve(client, operator_token, m
     assert resp.get_json()["status"] == "SUBMITTED"
     assert resp.get_json()["version"] == 2
 
-    # 5) Manager approves
-    resp = client.post(f"/api/v1/approvals/{submission_id}/approve", headers=auth_header(manager_token), json={})
+    # 5) Verify hierarchy rule: Admin cannot skip BU Manager verification
+    resp_skip = client.post(f"/api/v1/approvals/{submission_id}/approve", headers=auth_header(admin_token), json={})
+    assert resp_skip.status_code == 400
+    assert "Hierarchy violation" in resp_skip.get_json()["error"]["message"]
+
+    # 6) BU Manager verifies -> BU_VERIFIED
+    resp = client.post(f"/api/v1/approvals/{submission_id}/verify", headers=auth_header(manager_token), json={
+        "comment": "BU Manager verified values and evidence."
+    })
+    assert resp.status_code == 200, resp.get_json()
+    assert resp.get_json()["status"] == "BU_VERIFIED"
+
+    # 7) Verify hierarchy rule: Admin cannot skip Subsidiary verification
+    resp_skip_sub = client.post(f"/api/v1/approvals/{submission_id}/approve", headers=auth_header(admin_token), json={})
+    assert resp_skip_sub.status_code == 400
+    assert "Hierarchy violation" in resp_skip_sub.get_json()["error"]["message"]
+
+    # 8) Subsidiary verifies -> SUBSIDIARY_VERIFIED
+    resp = client.post(f"/api/v1/approvals/{submission_id}/verify-subsidiary", headers=auth_header(subsidiary_token), json={
+        "comment": "Subsidiary Officer verified across business units."
+    })
+    assert resp.status_code == 200, resp.get_json()
+    assert resp.get_json()["status"] == "SUBSIDIARY_VERIFIED"
+
+    # 9) Admin final approval
+    resp = client.post(f"/api/v1/approvals/{submission_id}/approve", headers=auth_header(admin_token), json={
+        "comment": "Group Admin final sign-off."
+    })
     assert resp.status_code == 200, resp.get_json()
     assert resp.get_json()["status"] == "APPROVED"
 
-    # 6) Approved data shows up in consolidation at group level
+    # 10) Approved data shows up in consolidation at group level
     resp = client.get(
         f"/api/v1/analytics/consolidation?scopeType=GROUP&reportingPeriodId={period['id']}",
-        headers=auth_header(manager_token),
+        headers=auth_header(admin_token),
     )
     assert resp.status_code == 200
     totals = resp.get_json()["node"]["totals"]
     assert totals.get("p2_input", 0) >= 100
 
 
-def test_cannot_edit_locked_submission(client, operator_token, manager_token):
+def test_cannot_edit_locked_submission(client, operator_token, manager_token, subsidiary_token, admin_token):
     project, period = _get_project_and_period(client, operator_token)
     resp = client.post("/api/v1/submissions", headers=auth_header(operator_token), json={
         "projectId": project["id"], "reportingPeriodId": period["id"], "principleCode": "P4",
         "values": {"p4_meet": {"v": 2, "ev": ""}}, "submit": True,
     })
     submission_id = resp.get_json()["id"]
-    client.post(f"/api/v1/approvals/{submission_id}/approve", headers=auth_header(manager_token), json={})
+    # BU Manager verifies -> Subsidiary verifies -> Admin approves
+    client.post(f"/api/v1/approvals/{submission_id}/verify", headers=auth_header(manager_token), json={})
+    client.post(f"/api/v1/approvals/{submission_id}/verify-subsidiary", headers=auth_header(subsidiary_token), json={})
+    client.post(f"/api/v1/approvals/{submission_id}/approve", headers=auth_header(admin_token), json={})
 
     resp = client.post("/api/v1/submissions", headers=auth_header(operator_token), json={
         "projectId": project["id"], "reportingPeriodId": period["id"], "principleCode": "P4",

@@ -25,9 +25,37 @@ class CodeSequence(db.Model):
 
     @classmethod
     def next(cls, name, start=1000):
-        row = cls.query.get(name)
+        row = db.session.get(cls, name)
         if row is None:
-            row = cls(name=name, value=start)
+            calculated_start = start
+            try:
+                if name == "risk":
+                    from app.models.risk import Risk
+                    risks = Risk.query.all()
+                    nums = [int(r.risk_code.split("-")[1]) for r in risks if r.risk_code and "-" in r.risk_code and r.risk_code.split("-")[1].isdigit()]
+                    if nums:
+                        calculated_start = max(nums)
+                elif name == "vendor":
+                    from app.models.vendor import Vendor
+                    vendors = Vendor.query.all()
+                    nums = [int(v.vendor_code.split("-")[1]) for v in vendors if v.vendor_code and "-" in v.vendor_code and v.vendor_code.split("-")[1].isdigit()]
+                    if nums:
+                        calculated_start = max(nums)
+                elif name == "report":
+                    from app.models.report import Report
+                    reports = Report.query.all()
+                    nums = [int(r.report_code.split("-")[1]) for r in reports if r.report_code and "-" in r.report_code and r.report_code.split("-")[1].isdigit()]
+                    if nums:
+                        calculated_start = max(nums)
+                elif name == "organization":
+                    from app.models.organization import Organization
+                    orgs = Organization.query.all()
+                    nums = [int(o.code.split("-")[1]) for o in orgs if o.code and "-" in o.code and o.code.split("-")[1].isdigit()]
+                    if nums:
+                        calculated_start = max(nums)
+            except Exception:
+                calculated_start = start
+            row = cls(name=name, value=calculated_start)
             db.session.add(row)
         row.value += 1
         db.session.flush()

@@ -20,7 +20,10 @@ import {
   ShieldAlert,
   ArrowRight,
   RefreshCw,
+  ShieldCheck,
 } from 'lucide-react';
+
+import VerigraphPipelineDemo from '../../components/VerigraphPipelineDemo';
 
 import {
   AreaChart,
@@ -83,21 +86,21 @@ import organizationApi from '../../services/organizationApi';
 
 const THEME = {
   environment: {
-    bg: 'bg-emerald-50 text-emerald-700',
+    bg: 'bg-emerald-50 text-emerald-800 border border-emerald-300 ring-1 ring-emerald-300',
     c1: '#10b981',
-    c2: '#6ee7b7',
+    c2: '#0ea5e9',
   },
 
   social: {
-    bg: 'bg-sky-50 text-sky-700',
-    c1: '#0ea5e9',
-    c2: '#7dd3fc',
+    bg: 'bg-sky-50 text-sky-800 border border-sky-300 ring-1 ring-sky-300',
+    c1: '#0284c7',
+    c2: '#38bdf8',
   },
 
   governance: {
-    bg: 'bg-indigo-50 text-indigo-700',
-    c1: '#6366f1',
-    c2: '#a5b4fc',
+    bg: 'bg-indigo-50 text-indigo-800 border border-indigo-300 ring-1 ring-indigo-300',
+    c1: '#4f46e5',
+    c2: '#818cf8',
   },
 };
 
@@ -205,6 +208,11 @@ export default function AdminPortal() {
   ] = useState(
     'environment'
   );
+
+  const [
+    showDemoModal,
+    setShowDemoModal,
+  ] = useState(false);
 
 
   const {
@@ -820,6 +828,11 @@ export default function AdminPortal() {
                       ) /
                         1000
                     ),
+
+                  dgFuel: Math.round(num(row.p6_dg)),
+                  machFuel: Math.round(num(row.p6_mach)),
+                  petrolFuel: Math.round(num(row.p6_petrol)),
+                  gridKwh: Math.round(num(row.p6_grid)),
                 })
               );
           } catch {
@@ -902,6 +915,8 @@ export default function AdminPortal() {
             (row) => {
               let counts = {
                 approved: 0,
+                subsidiary_verified: 0,
+                bu_verified: 0,
                 submitted: 0,
                 correction_required: 0,
                 rejected: 0,
@@ -951,7 +966,17 @@ export default function AdminPortal() {
                     counts.approved
                   ),
 
-                'Awaiting review':
+                'Subsidiary Verified':
+                  num(
+                    counts.subsidiary_verified
+                  ),
+
+                'BU Verified':
+                  num(
+                    counts.bu_verified
+                  ),
+
+                'With BU':
                   num(
                     counts.submitted
                   ),
@@ -1130,7 +1155,7 @@ export default function AdminPortal() {
           'standalone'
             ? 'Standalone'
             : 'Consolidated'
-        } · ${fy}. Figures are consolidated from BU-approved site data.`}
+        } · FY ${fy}`}
         actions={
           <div className="flex items-center gap-2">
 
@@ -1155,20 +1180,20 @@ export default function AdminPortal() {
               Refresh
             </Btn>
 
+            <Btn
+              tone="ghost"
+              onClick={() => nav('/admin/audit')}
+            >
+              <ShieldCheck size={16} />
+              Audit Center
+            </Btn>
 
             <Btn
-              tone="dark"
-              onClick={() =>
-                nav(
-                  '/admin/reports'
-                )
-              }
+              tone="primary"
+              onClick={() => nav('/admin/reports')}
             >
-              Generate BRSR report
-
-              <ArrowRight
-                size={16}
-              />
+              Generate BRSR Report
+              <ArrowRight size={16} />
             </Btn>
 
           </div>
@@ -1349,98 +1374,129 @@ export default function AdminPortal() {
           </div>
 
 
-          <Card pad={false}>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch">
+            <Card pad={false}>
+              <CardHeader
+                title="Emissions Trajectory"
+                subtitle="Monthly Scope 1 (Direct Fuel) vs Scope 2 (Grid) in tCO2e"
+              />
 
-            <CardHeader
-              title="Emissions trend"
-              subtitle="Monthly tCO2e from approved data"
-            />
-
-
-            <div className="h-80 p-4">
-
-              <ResponsiveContainer
-                width="100%"
-                height="100%"
-              >
-
-                <AreaChart
-                  data={series}
-                  margin={{
-                    left: -6,
-                    right: 16,
-                    top: 8,
-                  }}
+              <div className="h-80 p-4">
+                <ResponsiveContainer
+                  width="100%"
+                  height="100%"
                 >
+                  <AreaChart
+                    data={series}
+                    margin={{
+                      left: -10,
+                      right: 16,
+                      top: 10,
+                      bottom: 0,
+                    }}
+                  >
+                    <CartesianGrid
+                      strokeDasharray="3 3"
+                      vertical={false}
+                      stroke="#f1f5f9"
+                    />
+                    <XAxis
+                      dataKey="month"
+                      {...ax}
+                    />
+                    <YAxis
+                      {...ax}
+                    />
+                    <Tooltip
+                      contentStyle={tip}
+                    />
+                    <Legend
+                      iconType="circle"
+                      wrapperStyle={{ fontSize: 12, paddingTop: 6 }}
+                    />
+                    <Area
+                      type="monotone"
+                      dataKey="Scope 1"
+                      stroke="#10b981"
+                      fill="#10b981"
+                      fillOpacity={0.16}
+                      strokeWidth={2.5}
+                    />
+                    <Area
+                      type="monotone"
+                      dataKey="Scope 2"
+                      stroke="#0ea5e9"
+                      fill="#0ea5e9"
+                      fillOpacity={0.2}
+                      strokeWidth={2.5}
+                    />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </div>
+            </Card>
 
-                  <CartesianGrid
-                    strokeDasharray="3 3"
-                    vertical={false}
-                    stroke="#e2e8f0"
-                  />
+            <Card pad={false}>
+              <CardHeader
+                title="Equipment & Energy Breakdown"
+                subtitle="Monthly operational fuel (L) and electricity intake across active sites"
+              />
 
-                  <XAxis
-                    dataKey="month"
-                    {...ax}
-                  />
-
-                  <YAxis
-                    {...ax}
-                  />
-
-                  <Tooltip
-                    contentStyle={
-                      tip
-                    }
-                  />
-
-                  <Legend
-                    iconType="circle"
-                  />
-
-
-                  <Area
-                    type="monotone"
-                    dataKey="Scope 1"
-                    stroke={
-                      th.c1
-                    }
-                    fill={
-                      th.c1
-                    }
-                    fillOpacity={
-                      0.16
-                    }
-                    strokeWidth={
-                      2.5
-                    }
-                  />
-
-
-                  <Area
-                    type="monotone"
-                    dataKey="Scope 2"
-                    stroke={
-                      th.c2
-                    }
-                    fill={
-                      th.c2
-                    }
-                    fillOpacity={
-                      0.25
-                    }
-                    strokeWidth={
-                      2.5
-                    }
-                  />
-
-                </AreaChart>
-
-              </ResponsiveContainer>
-
-            </div>
-
-          </Card>
+              <div className="h-80 p-4">
+                <ResponsiveContainer
+                  width="100%"
+                  height="100%"
+                >
+                  <BarChart
+                    data={series}
+                    margin={{
+                      left: -10,
+                      right: 16,
+                      top: 10,
+                      bottom: 0,
+                    }}
+                  >
+                    <CartesianGrid
+                      strokeDasharray="3 3"
+                      vertical={false}
+                      stroke="#f1f5f9"
+                    />
+                    <XAxis
+                      dataKey="month"
+                      {...ax}
+                    />
+                    <YAxis
+                      {...ax}
+                    />
+                    <Tooltip
+                      contentStyle={tip}
+                    />
+                    <Legend
+                      iconType="circle"
+                      wrapperStyle={{ fontSize: 12, paddingTop: 6 }}
+                    />
+                    <Bar
+                      dataKey="dgFuel"
+                      name="DG Diesel (L)"
+                      fill="#10b981"
+                      radius={[4, 4, 0, 0]}
+                    />
+                    <Bar
+                      dataKey="machFuel"
+                      name="Machinery (L)"
+                      fill="#0ea5e9"
+                      radius={[4, 4, 0, 0]}
+                    />
+                    <Bar
+                      dataKey="petrolFuel"
+                      name="Petrol (L)"
+                      fill="#f59e0b"
+                      radius={[4, 4, 0, 0]}
+                    />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </Card>
+          </div>
 
         </>
       )}
@@ -1683,7 +1739,16 @@ export default function AdminPortal() {
 
             <CardHeader
               title="Approval pipeline this month"
-              subtitle="Site × principle packets by status"
+              subtitle="Hierarchical Flow: Site Operator (Committed) → BU Manager (Verified) → Subsidiary (Verified) → Group Admin (Final Approval)"
+              right={
+                <Btn
+                  tone="primary"
+                  onClick={() => nav('/admin/approvals')}
+                  className="text-xs"
+                >
+                  Open Final Approvals Queue
+                </Btn>
+              }
             />
 
 
@@ -1741,12 +1806,28 @@ export default function AdminPortal() {
 
                   <Bar
                     dataKey="Approved"
+                    name="Admin Approved (Final)"
                     stackId="a"
                     fill="#10b981"
                   />
 
                   <Bar
-                    dataKey="Awaiting review"
+                    dataKey="Subsidiary Verified"
+                    name="Subsidiary Verified (Awaiting Admin)"
+                    stackId="a"
+                    fill="#6366f1"
+                  />
+
+                  <Bar
+                    dataKey="BU Verified"
+                    name="BU Verified (Awaiting Subsidiary)"
+                    stackId="a"
+                    fill="#3b82f6"
+                  />
+
+                  <Bar
+                    dataKey="With BU"
+                    name="With BU Manager (Committed)"
                     stackId="a"
                     fill="#f59e0b"
                   />
@@ -2065,6 +2146,10 @@ export default function AdminPortal() {
 
       </Card>
 
+      <VerigraphPipelineDemo
+        isOpen={showDemoModal}
+        onClose={() => setShowDemoModal(false)}
+      />
     </div>
   );
 }

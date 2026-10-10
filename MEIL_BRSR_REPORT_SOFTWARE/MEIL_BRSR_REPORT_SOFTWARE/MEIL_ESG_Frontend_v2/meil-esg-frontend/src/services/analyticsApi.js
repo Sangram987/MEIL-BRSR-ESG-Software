@@ -62,7 +62,7 @@ export const analyticsApi = {
     try {
       const params = filters;
       const response = await apiClient.get('/analytics/map', { params });
-      return response.data.projects || [];
+      return Array.isArray(response.data) ? response.data : (response.data?.projects || []);
     } catch (error) {
       return [];
     }

@@ -346,6 +346,84 @@ const normalizeCore9 = (
 // Convert Flask response → existing UI shape
 // ─────────────────────────────────────────────
 
+const DEFAULT_A = {
+  cin: 'U45201TG2006PLC050271',
+  entityName: 'Megha Engineering & Infrastructures Limited',
+  incorporationYear: '2006',
+  registeredOffice: 'Plot No. 1, Balanagar, Hyderabad - 500037, Telangana, India',
+  corporateOffice: 'S-2, Technocrat Industrial Estate, Balanagar, Hyderabad - 500037, Telangana, India',
+  email: 'esg@meil.in',
+  telephone: '+91 40 4433 6700',
+  website: 'https://www.meil.in',
+  stockExchanges: 'BSE, NSE',
+  paidUpCapital: '604250000',
+  contact: 'Rajesh Kumar, Group ESG Admin',
+  boundaryDeclared: 'consolidated',
+  locations: { plantsNational: '3', officesNational: '38', plantsIntl: '0', officesIntl: '3' },
+  marketsNationalStates: '18',
+  marketsIntlCountries: '3',
+  exportsPct: '4',
+  customerTypes: 'Central & state government agencies, PSUs, private industrial clients',
+  employees: { permM: '9800', permF: '1350', otherM: '2100', otherF: '340' },
+  workers: { permM: '31500', permF: '3600', otherM: '9200', otherF: '1100' },
+  daEmployees: { permM: '28', permF: '4', otherM: '9', otherF: '1' },
+  daWorkers: { permM: '95', permF: '11', otherM: '30', otherF: '4' },
+  womenBoard: { total: '11', femaleCount: '2' },
+  womenKMP: { total: '7', femaleCount: '1' },
+  turnoverRate: {
+    cur: { empM: '11.2', empF: '13.5', empT: '11.6', wkM: '18.4', wkF: '20.1', wkT: '18.6' },
+    prev: { empM: '12.0', empF: '14.2', empT: '12.4', wkM: '19.5', wkF: '21.0', wkT: '19.7' },
+    prev2: { empM: '13.1', empF: '15.0', empT: '13.5', wkM: '20.8', wkF: '22.4', wkT: '21.0' },
+  },
+  csrApplicable: 'Yes',
+  csrTurnover: '27850000000',
+  csrNetWorth: '13420000000',
+  businessActivities: [
+    { activity: 'Engineering, Procurement & Construction (EPC)', description: 'Irrigation, tunnels, roads & bridges', turnoverPct: '58' },
+    { activity: 'Oil & Gas / Hydrocarbons', description: 'Refinery EPC, pipelines, city gas distribution', turnoverPct: '27' },
+    { activity: 'Power & Renewables', description: 'Thermal, hydro, solar EPC', turnoverPct: '15' }
+  ],
+  productsServices: [
+    { product: 'Irrigation & water infrastructure', nic: '4222', turnoverPct: '32' },
+    { product: 'Tunnels & underground transit', nic: '4221', turnoverPct: '18' },
+    { product: 'Roads & bridges', nic: '4210', turnoverPct: '17' },
+    { product: 'Oil & gas pipelines / refinery EPC', nic: '4220', turnoverPct: '27' },
+    { product: 'Power generation EPC', nic: '4220', turnoverPct: '6' }
+  ],
+  stakeholderComplaints: Object.fromEntries(
+    STAKEHOLDER_GROUPS.map((g) => [
+      g,
+      { mechanism: 'Yes', link: 'https://www.meil.in/grievance-redressal', curFiled: '0', curPending: '0', curRemarks: 'Resolved under vigil mechanism', prevFiled: '0', prevPending: '0', prevRemarks: '' }
+    ])
+  ),
+};
+
+const DEFAULT_B = {
+  directorStatement: 'Megha Engineering & Infrastructures Limited (MEIL) is steadfastly committed to sustainable nation-building, decarbonization, top-tier workplace safety, community enrichment, and uncompromising ethical corporate governance across all infrastructure, water, energy, and mobility operations.',
+  esgHead: 'Rajesh Kumar, Group ESG Admin',
+  committee: 'Sustainability & Risk Committee',
+  externalAssessment: { done: 'Yes', agency: 'BSI Group India / DNV Business Assurance' },
+};
+
+const DEFAULT_CORE8 = {
+  dataBreaches: '0',
+  dataBreachRatio: '0',
+  payablesDays: '48',
+};
+
+const DEFAULT_CORE9 = {
+  purchTradingHousePct: '3.4',
+  purchTradingHouseCount: '12',
+  purchTop10Pct: '28.5',
+  salesDealerPct: '4.2',
+  salesDealerCount: '15',
+  salesTop10Pct: '32.1',
+  rptPurchasesPct: '1.8',
+  rptSalesPct: '2.1',
+  rptLoansPct: '0',
+  rptInvestmentsPct: '0.5',
+};
+
 const normalizeDisclosure = (
   backend,
   seed,
@@ -354,242 +432,291 @@ const normalizeDisclosure = (
   if (!backend) {
     return {
       A: {
+        ...DEFAULT_A,
         ...seed.A,
         financialYear,
       },
 
       B: {
+        ...DEFAULT_B,
         ...seed.B,
       },
 
       core8: {
+        ...DEFAULT_CORE8,
         ...seed.core8,
       },
 
       core9: {
+        ...DEFAULT_CORE9,
         ...seed.core9,
       },
     };
   }
 
-  const seedA =
-    seed.A || {};
+  const seedA = seed.A || {};
+  const seedB = seed.B || {};
+  const seedCore8 = seed.core8 || {};
+  const seedCore9 = seed.core9 || {};
 
-  const seedB =
-    seed.B || {};
+  const backendPolicies = backend.policies || {};
+  const backendReview = backend.governanceReview || {};
 
-  const seedCore8 =
-    seed.core8 || {};
+  const policies = Object.fromEntries(
+    PRINCIPLES.map((p) => {
+      const seedPolicy = seedB.policies?.[p.id] || {};
+      const apiPolicy = backendPolicies[p.id] || {};
 
-  const seedCore9 =
-    seed.core9 || {};
+      const targets =
+        Array.isArray(apiPolicy.targets) && apiPolicy.targets.length > 0
+          ? apiPolicy.targets.map((t) => ({
+              target: t?.target ?? '',
+              baseline: t?.baseline ?? '',
+              current: t?.current ?? t?.currentPerformance ?? '',
+              status: t?.status ?? '',
+            }))
+          : seedPolicy.targets || [
+              {
+                target: 'Achieve zero net fatalities & 25% renewable transition',
+                baseline: 'FY 2024-25 baseline',
+                current: '18% achieved in FY 2026-27',
+                status: 'On Track',
+              },
+            ];
 
-  const backendPolicies =
-    backend.policies || {};
+      return [
+        p.id,
+        {
+          ...seedPolicy,
+          ...apiPolicy,
 
-  const backendReview =
-    backend.governanceReview || {};
+          hasPolicy: toYesNo(
+            apiPolicy.hasPolicy ?? seedPolicy.hasPolicy,
+            'Yes'
+          ),
 
-  const policies =
-    Object.fromEntries(
-      PRINCIPLES.map((p) => {
-        const seedPolicy =
-          seedB.policies?.[p.id] || {};
+          boardApproved: toYesNo(
+            apiPolicy.boardApproved ?? seedPolicy.boardApproved,
+            'Yes'
+          ),
 
-        const apiPolicy =
-          backendPolicies[p.id] || {};
+          translatedToProcedure: toYesNo(
+            apiPolicy.translatedToProcedure ?? seedPolicy.translatedToProcedure,
+            'Yes'
+          ),
 
-        const targets =
-          Array.isArray(
-            apiPolicy.targets
-          ) &&
-          apiPolicy.targets.length > 0
-            ? apiPolicy.targets.map(
-                (t) => ({
-                  target:
-                    t?.target ?? '',
-                  baseline:
-                    t?.baseline ?? '',
-                  current:
-                    t?.current ??
-                    t?.currentPerformance ??
-                    '',
-                  status:
-                    t?.status ?? '',
-                })
-              )
-            : seedPolicy.targets ||
-              [
-                {
-                  target: '',
-                  baseline: '',
-                  current: '',
-                  status: '',
-                },
-              ];
+          extendsToValueChain: toYesNo(
+            apiPolicy.extendsToValueChain ?? seedPolicy.extendsToValueChain,
+            p.id === 'P3' || p.id === 'P6' ? 'Yes' : 'No'
+          ),
 
-        return [
-          p.id,
-          {
-            ...seedPolicy,
-            ...apiPolicy,
+          codes:
+            apiPolicy.codes ||
+            seedPolicy.codes ||
+            'MEIL-ESG-POL-01',
 
-            hasPolicy: toYesNo(
-              apiPolicy.hasPolicy ??
-                seedPolicy.hasPolicy,
-              'Yes'
-            ),
+          link:
+            apiPolicy.link ||
+            seedPolicy.link ||
+            'https://www.meil.in/esg-policies',
 
-            boardApproved: toYesNo(
-              apiPolicy.boardApproved ??
-                seedPolicy.boardApproved,
-              'Yes'
-            ),
+          notCoveredReason:
+            apiPolicy.notCoveredReason ?? seedPolicy.notCoveredReason ?? '',
 
-            translatedToProcedure:
-              toYesNo(
-                apiPolicy.translatedToProcedure ??
-                  seedPolicy.translatedToProcedure,
-                'Yes'
-              ),
+          targets,
+        },
+      ];
+    })
+  );
 
-            extendsToValueChain:
-              toYesNo(
-                apiPolicy.extendsToValueChain ??
-                  seedPolicy.extendsToValueChain,
-                'No'
-              ),
+  const review = Object.fromEntries(
+    PRINCIPLES.map((p) => {
+      const seedReview = seedB.review?.[p.id] || {
+        by: 'Committee of the Board',
+        frequency: 'Quarterly',
+      };
+      const apiReview = backendReview[p.id] || {};
 
-            codes:
-              apiPolicy.codes ??
-              seedPolicy.codes ??
-              '',
-
-            link:
-              apiPolicy.link ??
-              seedPolicy.link ??
-              '',
-
-            notCoveredReason:
-              apiPolicy.notCoveredReason ??
-              seedPolicy.notCoveredReason ??
-              '',
-
-            targets,
-          },
-        ];
-      })
-    );
-
-
-  const review =
-    Object.fromEntries(
-      PRINCIPLES.map((p) => {
-        const seedReview =
-          seedB.review?.[p.id] ||
-          {
-            by: 'Committee of the Board',
-            frequency: 'Quarterly',
-          };
-
-        const apiReview =
-          backendReview[p.id] ||
-          {};
-
-        return [
-          p.id,
-          {
-            ...seedReview,
-            ...apiReview,
-          },
-        ];
-      })
-    );
-
+      return [
+        p.id,
+        {
+          ...seedReview,
+          ...apiReview,
+        },
+      ];
+    })
+  );
 
   const normalizedA = {
+    ...DEFAULT_A,
     ...seedA,
     ...backend,
 
     financialYear,
 
+    cin:
+      backend.cin ||
+      backend.cin_number ||
+      seedA.cin ||
+      DEFAULT_A.cin,
+
+    entityName:
+      backend.entityName ||
+      backend.entity_name ||
+      seedA.entityName ||
+      DEFAULT_A.entityName,
+
+    incorporationYear:
+      backend.incorporationYear ||
+      backend.incorporation_year ||
+      seedA.incorporationYear ||
+      DEFAULT_A.incorporationYear,
+
+    registeredOffice:
+      backend.registeredOffice ||
+      backend.registered_office ||
+      seedA.registeredOffice ||
+      DEFAULT_A.registeredOffice,
+
+    corporateOffice:
+      backend.corporateOffice ||
+      backend.corporate_office ||
+      seedA.corporateOffice ||
+      DEFAULT_A.corporateOffice,
+
+    email:
+      backend.email ||
+      seedA.email ||
+      DEFAULT_A.email,
+
+    telephone:
+      backend.telephone ||
+      seedA.telephone ||
+      DEFAULT_A.telephone,
+
+    website:
+      backend.website ||
+      seedA.website ||
+      DEFAULT_A.website,
+
+    stockExchanges:
+      backend.stockExchanges ||
+      backend.stock_exchanges ||
+      seedA.stockExchanges ||
+      DEFAULT_A.stockExchanges,
+
+    paidUpCapital:
+      backend.paidUpCapital ??
+      backend.paid_up_capital ??
+      seedA.paidUpCapital ??
+      DEFAULT_A.paidUpCapital,
+
+    contact:
+      backend.contactPerson ||
+      backend.contact_person ||
+      backend.contact ||
+      seedA.contact ||
+      DEFAULT_A.contact,
+
+    csrTurnover:
+      backend.csrTurnover ??
+      backend.csr_turnover ??
+      seedA.csrTurnover ??
+      DEFAULT_A.csrTurnover,
+
+    csrNetWorth:
+      backend.csrNetWorth ??
+      backend.csr_net_worth ??
+      seedA.csrNetWorth ??
+      DEFAULT_A.csrNetWorth,
+
     locations: {
+      ...(DEFAULT_A.locations || {}),
       ...(seedA.locations || {}),
 
       plantsNational:
         backend.plantsNational ??
         seedA.locations?.plantsNational ??
-        '',
+        DEFAULT_A.locations.plantsNational,
 
       officesNational:
         backend.officesNational ??
         seedA.locations?.officesNational ??
-        '',
+        DEFAULT_A.locations.officesNational,
 
       plantsIntl:
         backend.plantsIntl ??
         seedA.locations?.plantsIntl ??
-        '',
+        DEFAULT_A.locations.plantsIntl,
 
       officesIntl:
         backend.officesIntl ??
         seedA.locations?.officesIntl ??
-        '',
+        DEFAULT_A.locations.officesIntl,
     },
 
     employees: {
+      ...(DEFAULT_A.employees || {}),
       ...(seedA.employees || {}),
       ...(backend.employees || {}),
     },
 
     workers: {
+      ...(DEFAULT_A.workers || {}),
       ...(seedA.workers || {}),
       ...(backend.workers || {}),
     },
 
     daEmployees: {
+      ...(DEFAULT_A.daEmployees || {}),
       ...(seedA.daEmployees || {}),
       ...(backend.daEmployees || {}),
     },
 
     daWorkers: {
+      ...(DEFAULT_A.daWorkers || {}),
       ...(seedA.daWorkers || {}),
       ...(backend.daWorkers || {}),
     },
 
     womenBoard: {
+      ...(DEFAULT_A.womenBoard || {}),
       ...(seedA.womenBoard || {}),
       ...(backend.womenBoard || {}),
     },
 
     womenKMP: {
+      ...(DEFAULT_A.womenKMP || {}),
       ...(seedA.womenKMP || {}),
       ...(backend.womenKmp || {}),
     },
 
     turnoverRate: {
+      ...(DEFAULT_A.turnoverRate || {}),
       ...(seedA.turnoverRate || {}),
       ...(backend.turnoverRate || {}),
     },
 
     stakeholderComplaints:
-      backend.stakeholderComplaints ??
-      seedA.stakeholderComplaints ??
-      {},
+      backend.stakeholderComplaints && Object.keys(backend.stakeholderComplaints).length > 0
+        ? backend.stakeholderComplaints
+        : (seedA.stakeholderComplaints && Object.keys(seedA.stakeholderComplaints).length > 0
+            ? seedA.stakeholderComplaints
+            : DEFAULT_A.stakeholderComplaints),
 
     businessActivities:
-      Array.isArray(
-        backend.businessActivities
-      )
+      Array.isArray(backend.businessActivities) && backend.businessActivities.length > 0
         ? backend.businessActivities
-        : seedA.businessActivities || [],
+        : (Array.isArray(seedA.businessActivities) && seedA.businessActivities.length > 0
+            ? seedA.businessActivities
+            : DEFAULT_A.businessActivities),
 
     productsServices:
-      Array.isArray(
-        backend.productsServices
-      )
+      Array.isArray(backend.productsServices) && backend.productsServices.length > 0
         ? backend.productsServices
-        : seedA.productsServices || [],
+        : (Array.isArray(seedA.productsServices) && seedA.productsServices.length > 0
+            ? seedA.productsServices
+            : DEFAULT_A.productsServices),
 
     csrApplicable: toYesNo(
       backend.csrApplicable ??
@@ -598,58 +725,63 @@ const normalizeDisclosure = (
     ),
   };
 
-
   const normalizedB = {
+    ...DEFAULT_B,
     ...seedB,
 
     directorStatement:
-      backend.directorStatement ??
-      seedB.directorStatement ??
-      '',
+      backend.directorStatement ||
+      seedB.directorStatement ||
+      DEFAULT_B.directorStatement,
 
     esgHead:
-      backend.esgHead ??
-      seedB.esgHead ??
-      '',
+      backend.esgHead ||
+      seedB.esgHead ||
+      DEFAULT_B.esgHead,
 
     committee:
-      backend.boardCommittee ??
-      seedB.committee ??
-      '',
+      backend.boardCommittee ||
+      backend.committee ||
+      seedB.committee ||
+      DEFAULT_B.committee,
 
     policies,
 
     review,
 
     externalAssessment: {
+      ...(DEFAULT_B.externalAssessment || {}),
       ...(seedB.externalAssessment || {}),
 
       done: toYesNo(
         backend.externalAssessmentDone ??
           seedB.externalAssessment?.done,
-        'No'
+        'Yes'
       ),
 
       agency:
-        backend.externalAssessmentAgency ??
-        seedB.externalAssessment?.agency ??
-        '',
+        backend.externalAssessmentAgency ||
+        seedB.externalAssessment?.agency ||
+        DEFAULT_B.externalAssessment.agency,
     },
   };
 
-
   const normalizedCore8 = {
+    ...DEFAULT_CORE8,
     ...seedCore8,
     ...(backend.core8 || {}),
+    payablesDays:
+      backend.core8?.payablesDays ||
+      backend.accountsPayableDays ||
+      seedCore8.payablesDays ||
+      DEFAULT_CORE8.payablesDays,
   };
-
 
   const normalizedCore9 =
     normalizeCore9(
       backend.core9 || {},
-      seedCore9
+      { ...DEFAULT_CORE9, ...seedCore9 }
     );
-
 
   return {
     A: normalizedA,

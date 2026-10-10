@@ -12,7 +12,7 @@ class RegisterSchema(Schema):
     firstName = fields.Str(required=True, validate=validate.Length(min=1, max=80))
     lastName = fields.Str(load_default="")
     role = fields.Str(required=True, validate=validate.OneOf([
-        "GROUP_ADMIN", "ESG_MANAGER", "BU_MANAGER", "SITE_OPERATOR", "VENDOR_USER", "ASSESSOR", "EXECUTIVE_VIEWER",
+        "GROUP_ADMIN", "ESG_MANAGER", "SUBSIDIARY_HEAD", "BU_MANAGER", "SITE_OPERATOR", "VENDOR_USER", "ASSESSOR", "EXECUTIVE_VIEWER",
     ]))
 
 

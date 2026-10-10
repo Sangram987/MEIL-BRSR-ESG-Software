@@ -12,7 +12,7 @@ from app.models.brsr import (  # noqa: F401
     BrsrIndicator, BrsrValidationRule, Sdg, PrincipleSdgMapping,
 )
 from app.models.submission import EsgSubmission, EsgValue, SubmissionVersion  # noqa: F401
-from app.models.evidence import Document, MetricEvidence  # noqa: F401
+from app.models.evidence import Document, MetricEvidence, EvidenceBatch, BatchItem  # noqa: F401
 from app.models.review import ReviewAction  # noqa: F401
 from app.models.audit import AuditLog  # noqa: F401
 from app.models.vendor import Vendor, VendorProjectLink, VendorRequest, VendorValue, VendorReview  # noqa: F401
@@ -24,4 +24,7 @@ from app.models.report import Report, ReportFile  # noqa: F401
 from app.models.disclosure import (  # noqa: F401
     EntityDisclosure, BusinessActivity, ProductService, PolicyCoverage,
     Commitment, GovernanceReview, Core8Fairness, Core9Openness,
+)
+from app.models.forensics import (  # noqa: F401
+    ExtractedFact, VerificationResult, TrustScore, CapaRecord, PhysicalVerification,
 )

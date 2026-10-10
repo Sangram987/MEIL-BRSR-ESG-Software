@@ -34,14 +34,14 @@ def _to_dict(ed: EntityDisclosure):
     out["businessActivities"] = [{"activity": a.activity, "description": a.description, "turnoverPct": float(a.turnover_pct or 0)} for a in ed.business_activities]
     out["productsServices"] = [{"product": p.product, "nic": p.nic_code, "turnoverPct": float(p.turnover_pct or 0)} for p in ed.products_services]
     out["policies"] = {
-        pc.principle.code: {
+        (pc.principle.code if pc.principle else f"P{pc.principle_id}"): {
             "hasPolicy": pc.has_policy, "boardApproved": pc.board_approved,
             "translatedToProcedure": pc.translated_to_procedure, "extendsToValueChain": pc.extends_to_value_chain,
             "codes": pc.codes_certifications, "link": pc.policy_link, "notCoveredReason": pc.not_covered_reason,
             "targets": [{"target": c.target, "baseline": c.baseline, "current": c.current_performance, "status": c.status} for c in pc.commitments],
         } for pc in ed.policy_coverage
     }
-    out["governanceReview"] = {gr.principle.code: {"by": gr.reviewed_by, "frequency": gr.frequency} for gr in ed.governance_reviews}
+    out["governanceReview"] = {(gr.principle.code if gr.principle else f"P{gr.principle_id}"): {"by": gr.reviewed_by, "frequency": gr.frequency} for gr in ed.governance_reviews}
     out["core8"] = ed.core8.to_dict() if ed.core8 else {}
     out["core9"] = ed.core9.to_dict() if ed.core9 else {}
     return out
@@ -57,6 +57,16 @@ def _camel(snake):
 def get_disclosure():
     org_id = request.args.get("organizationId")
     fy = request.args.get("financialYear")
+    if not org_id:
+        group = Organization.query.filter_by(type="GROUP").first()
+        org_id = group.id if group else None
+    else:
+        org = Organization.query.filter((Organization.id == org_id) | (Organization.code == org_id)).first()
+        if org:
+            org_id = org.id
+    if not fy:
+        p = ReportingPeriod.query.filter_by(period_type="FINANCIAL_YEAR").order_by(ReportingPeriod.start_date.desc()).first()
+        fy = p.financial_year if p else "FY 2026-27"
     if not org_id or not fy:
         raise ApiError("organizationId and financialYear are required.", 422)
     ed = EntityDisclosure.query.filter_by(organization_id=org_id, financial_year=fy).first()
@@ -70,6 +80,16 @@ def get_disclosure():
 def save_disclosure():
     body = request.get_json(force=True) or {}
     org_id, fy = body.get("organizationId"), body.get("financialYear")
+    if not org_id:
+        group = Organization.query.filter_by(type="GROUP").first()
+        org_id = group.id if group else None
+    else:
+        org = Organization.query.filter((Organization.id == org_id) | (Organization.code == org_id)).first()
+        if org:
+            org_id = org.id
+    if not fy:
+        p = ReportingPeriod.query.filter_by(period_type="FINANCIAL_YEAR").order_by(ReportingPeriod.start_date.desc()).first()
+        fy = p.financial_year if p else "FY 2026-27"
     if not org_id or not fy:
         raise ApiError("organizationId and financialYear are required.", 422)
 

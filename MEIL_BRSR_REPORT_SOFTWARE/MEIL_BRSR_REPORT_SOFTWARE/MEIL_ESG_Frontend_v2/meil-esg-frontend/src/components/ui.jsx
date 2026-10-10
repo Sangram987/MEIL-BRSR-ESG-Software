@@ -48,8 +48,12 @@ export const Badge = ({ tone = 'slate', children, className = '' }) => (
 );
 
 export const STATUS = {
-  none: ['slate', 'Not started'], draft: ['slate', 'Draft'], submitted: ['amber', 'Awaiting BU review'],
-  correction_required: ['rose', 'Correction required'], rejected: ['rose', 'Rejected'], approved: ['emerald', 'Approved'],
+  none: ['slate', 'Not started'], draft: ['slate', 'Draft'], submitted: ['amber', 'Pending BU Verification'],
+  bu_verified: ['blue', 'BU Verified (Awaiting Subsidiary)'],
+  subsidiary_verified: ['indigo', 'Subsidiary Verified (Awaiting Admin)'],
+  sub_verified: ['indigo', 'Subsidiary Verified (Awaiting Admin)'],
+  correction_required: ['rose', 'Correction required'], rejected: ['rose', 'Rejected'], approved: ['emerald', 'Admin Approved'],
+  locked: ['emerald', 'Admin Approved & Locked'],
   requested: ['amber', 'Awaiting vendor'], accepted: ['emerald', 'Accepted'],
 };
 export const StatusBadge = ({ status }) => { const [tone, label] = STATUS[status] || STATUS.none; return <Badge tone={tone}>{label}</Badge>; };

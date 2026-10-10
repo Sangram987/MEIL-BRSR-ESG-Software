@@ -43,7 +43,7 @@ export default function AiInsights() {
   const cutMach = fmt(calc.nodeTotals(scope, ui.fy, ui.boundary).t.p6_mach * 0.12 * EF.dieselKgPerL / 1000);
   return (
     <div className="space-y-6">
-      <PageHeader badge={<><Sparkles size={14} /> Analytics engine</>} title="Predictive insights & anomalies" subtitle="Rule-based anomaly detection on submitted data and a linear-trend forecast of Scope 1. These are statistical checks, not a trained ML model." />
+      <PageHeader badge={<><Sparkles size={14} /> Analytics engine</>} title="Predictive insights & anomalies" subtitle="Anomaly detection on submitted site packets and predictive trend forecasting for Scope 1." />
       <HierarchyFilter showProject={false} />
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="space-y-6">

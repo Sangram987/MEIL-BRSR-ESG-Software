@@ -11,6 +11,7 @@ from app.utils.audit import record
 bp = Blueprint("organization", __name__)
 
 
+@bp.get("/organizations/hierarchy")
 @bp.get("/organizations/tree")
 @authenticated
 def org_tree():

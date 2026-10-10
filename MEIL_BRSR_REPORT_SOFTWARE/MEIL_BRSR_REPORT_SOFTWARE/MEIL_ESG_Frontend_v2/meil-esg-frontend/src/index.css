@@ -28,44 +28,39 @@ body { font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto,
 .app-theme-dark {
   min-height: 100vh;
   color-scheme: dark;
-  color: #e2e8f0;
-  background-color: #020617;
+  color: #f1f5f9;
+  background-color: #0b1329;
 }
 
-.app-theme-dark .bg-white,
-.app-theme-dark .bg-gray-50,
-.app-theme-dark .bg-gray-100,
-.app-theme-dark [class~="bg-white/80"] { background-color: #0f172a !important }
-.app-theme-dark .bg-slate-50 { background-color: #0f172a !important }
+.app-theme-dark .bg-white { background-color: #111c38 !important }
+.app-theme-dark .bg-slate-50,
+.app-theme-dark .bg-gray-50 { background-color: #0f172a !important }
 .app-theme-dark .bg-slate-100,
-.app-theme-dark .bg-gray-200 { background-color: #1e293b !important }
-.app-theme-dark .bg-slate-200 { background-color: #334155 !important }
-.app-theme-dark .bg-slate-300 { background-color: #475569 !important }
+.app-theme-dark .bg-gray-100 { background-color: #1e293b !important }
+.app-theme-dark .bg-slate-200,
+.app-theme-dark .bg-gray-200 { background-color: #334155 !important }
 
-.app-theme-dark .text-black,
 .app-theme-dark .text-slate-900,
-.app-theme-dark .text-gray-900 { color: #f8fafc !important }
+.app-theme-dark .text-gray-900,
+.app-theme-dark .text-black { color: #f8fafc !important }
 .app-theme-dark .text-slate-800,
 .app-theme-dark .text-gray-800 { color: #e2e8f0 !important }
 .app-theme-dark .text-slate-700,
+.app-theme-dark .text-gray-700 { color: #cbd5e1 !important }
 .app-theme-dark .text-slate-600,
-.app-theme-dark .text-gray-700,
-.app-theme-dark .text-gray-600 { color: #cbd5e1 !important }
+.app-theme-dark .text-gray-600 { color: #94a3b8 !important }
 .app-theme-dark .text-slate-500,
-.app-theme-dark .text-slate-400,
-.app-theme-dark .text-gray-500,
-.app-theme-dark .text-gray-400 { color: #94a3b8 !important }
+.app-theme-dark .text-gray-500 { color: #94a3b8 !important }
 
 .app-theme-dark .border-slate-100,
 .app-theme-dark .border-slate-200,
 .app-theme-dark .border-gray-100,
-.app-theme-dark .border-gray-200 { border-color: #334155 !important }
+.app-theme-dark .border-gray-200 { border-color: #1e293b !important }
 .app-theme-dark .border-slate-300,
-.app-theme-dark .border-gray-300 { border-color: #475569 !important }
-.app-theme-dark [class~="hover:bg-slate-50"]:hover,
-.app-theme-dark [class~="hover:bg-slate-100"]:hover { background-color: #1e293b !important }
-.app-theme-dark [class~="divide-slate-100"] > :not(:first-child),
-.app-theme-dark [class~="divide-slate-200"] > :not(:first-child) { border-color: #334155 !important }
+.app-theme-dark .border-gray-300 { border-color: #334155 !important }
+
+.app-theme-dark [class~="hover:bg-slate-50"]:hover { background-color: #1e293b !important }
+.app-theme-dark [class~="hover:bg-slate-100"]:hover { background-color: #24324d !important }
 
 @media print {
   aside, header, nav, .no-print { display: none !important }

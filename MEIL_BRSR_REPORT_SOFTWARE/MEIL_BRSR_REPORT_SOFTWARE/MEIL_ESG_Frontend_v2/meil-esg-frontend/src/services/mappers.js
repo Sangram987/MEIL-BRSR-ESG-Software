@@ -7,6 +7,8 @@ export const ROLE_MAP = {
 
   admin: 'GROUP_ADMIN',
 
+  subsidiary: 'SUBSIDIARY_HEAD',
+
   manager: 'BU_MANAGER',
 
   operator: 'SITE_OPERATOR',
@@ -26,6 +28,8 @@ export const ROLE_REVERSE_MAP = {
   GROUP_ADMIN: 'admin',
 
   ESG_MANAGER: 'admin',
+
+  SUBSIDIARY_HEAD: 'subsidiary',
 
   EXECUTIVE_VIEWER: 'admin',
 
@@ -50,6 +54,12 @@ export const SUBMISSION_STATUS_MAP = {
   SUBMITTED: 'submitted',
 
   UNDER_REVIEW: 'under_review',
+
+  BU_VERIFIED: 'bu_verified',
+
+  SUBSIDIARY_VERIFIED: 'subsidiary_verified',
+
+  SUB_VERIFIED: 'subsidiary_verified',
 
   CORRECTION_REQUIRED: 'correction_required',
 
@@ -300,9 +310,32 @@ export function mapOrgTree(
     );
 
 
+  const bus = [];
+  const projects = [];
+  subsidiaries.forEach((sub) => {
+    (sub.businessUnits || []).forEach((bu) => {
+      bus.push({
+        ...bu,
+        subId: sub.id,
+      });
+      (bu.projects || []).forEach((p) => {
+        projects.push({
+          ...p,
+          subId: sub.id,
+          buId: bu.id,
+        });
+      });
+    });
+  });
+
   return {
-    org,
+    ...(org || {}),
+    id: org?.id || 'org-meil',
+    code: org?.code || 'MEIL',
+    name: org?.name || 'Megha Engineering & Infrastructures Limited',
     subsidiaries,
+    bus,
+    projects,
   };
 }
 
@@ -616,50 +649,57 @@ export function mapVendorRequest(backendRequest) {
 
  */
 
-export function mapRisk(backendRisk) {
+export function mapRisk(backendRisk = {}) {
+  const typeVal = String(backendRisk.type || backendRisk.risk_or_opportunity || backendRisk.risk_type || 'RISK').toUpperCase();
+  const typeFormatted = typeVal === 'OPPORTUNITY' ? 'Opportunity' : 'Risk';
+
+  const rawStatus = String(backendRisk.status || 'OPEN').toUpperCase();
+  const statusMap = {
+    OPEN: 'Open',
+    MITIGATING: 'Mitigating',
+    MONITORING: 'Monitoring',
+    CLOSED: 'Closed',
+  };
+  const statusFormatted = statusMap[rawStatus] || (rawStatus.charAt(0) + rawStatus.slice(1).toLowerCase());
+
+  const probMap = { low: 1, medium: 2, high: 3 };
+  const probRaw = backendRisk.probability ?? backendRisk.probability_level ?? backendRisk.likelihood ?? 2;
+  const prob = typeof probRaw === 'number' ? probRaw : (probMap[String(probRaw).toLowerCase()] || 2);
+
+  const impMap = { low: 1, medium: 2, high: 3 };
+  const impRaw = backendRisk.impact ?? backendRisk.impact_level ?? 2;
+  const imp = typeof impRaw === 'number' ? impRaw : (impMap[String(impRaw).toLowerCase()] || 2);
+
+  const finExposure = Number(backendRisk.financialExposureCr ?? backendRisk.financial ?? backendRisk.financial_exposure_amount ?? 0);
+
+  const ownerStr = typeof backendRisk.owner === 'string'
+    ? backendRisk.owner
+    : (backendRisk.owner?.name || backendRisk.owner_label || (backendRisk.owner_user ? `${backendRisk.owner_user.first_name} ${backendRisk.owner_user.last_name}`.trim() : ''));
 
   return {
-
     id: backendRisk.id,
-
-    code: backendRisk.code,
-
-    name: backendRisk.name,
-
-    category: backendRisk.risk_category?.toLowerCase() || 'operational',
-
-    type: backendRisk.risk_type?.toLowerCase() || 'risk',
-
-    description: backendRisk.description,
-
-    probability: backendRisk.probability_level?.toLowerCase() || 'medium',
-
-    impact: backendRisk.impact_level?.toLowerCase() || 'medium',
-
-    financialExposure: backendRisk.financial_exposure_amount,
-
-    mitigation: backendRisk.mitigation_strategy,
-
-    owner: backendRisk.owner_user
-
-      ? {
-
-        name: `${backendRisk.owner_user.first_name} ${backendRisk.owner_user.last_name}`,
-
-        email: backendRisk.owner_user.email,
-
-      }
-
-      : null,
-
-    linkedIndicators: backendRisk.linked_indicators || [],
-
-    linkedKpis: backendRisk.linked_kpis || [],
-
-    status: backendRisk.status?.toLowerCase() || 'open',
-
+    code: backendRisk.code || backendRisk.risk_code,
+    title: backendRisk.title || backendRisk.name || '',
+    name: backendRisk.title || backendRisk.name || '',
+    type: typeFormatted,
+    category: backendRisk.category || backendRisk.risk_category || 'Environmental',
+    rationale: backendRisk.rationale || '',
+    likelihood: prob,
+    probability: prob,
+    impact: imp,
+    riskScore: backendRisk.riskScore ?? backendRisk.risk_score ?? (prob * imp),
+    financial: finExposure,
+    financialExposureCr: finExposure,
+    financialExposure: finExposure,
+    financialImplication: backendRisk.financialImplication || backendRisk.financial_implication || '',
+    timeHorizon: backendRisk.timeHorizon || backendRisk.time_horizon || '',
+    owner: ownerStr,
+    mitigation: backendRisk.mitigation || backendRisk.mitigation_strategy || '',
+    status: statusFormatted,
+    includeInBrsr: Boolean(backendRisk.includeInBrsr ?? backendRisk.include_in_brsr),
+    linkedIndicators: backendRisk.linkedIndicators || backendRisk.linked_indicators || [],
+    linkedKpis: backendRisk.linkedKpis || backendRisk.linked_kpis || [],
   };
-
 }
 
 
@@ -670,50 +710,35 @@ export function mapRisk(backendRisk) {
 
  */
 
-export function mapAnalytics(backendAnalytics) {
+export function mapAnalytics(backendAnalytics = {}) {
+  if (!backendAnalytics) return {};
+  if (backendAnalytics.node) {
+    return backendAnalytics;
+  }
 
   return {
-
+    ...backendAnalytics,
     summary: {
-
-      totalSubmissions: backendAnalytics.total_submissions,
-
-      approvedSubmissions: backendAnalytics.approved_submissions,
-
-      submissionCoverage: backendAnalytics.submission_coverage_percent,
-
-      principlesCovered: backendAnalytics.principles_covered,
-
+      totalSubmissions: backendAnalytics.coverage?.totalSites ?? backendAnalytics.total_submissions ?? 0,
+      approvedSubmissions: backendAnalytics.coverage?.approvedSites ?? backendAnalytics.approved_submissions ?? 0,
+      submissionCoverage: backendAnalytics.coverage?.percent ?? backendAnalytics.submission_coverage_percent ?? 0,
+      principlesCovered: backendAnalytics.principles_covered ?? 9,
+      ...(backendAnalytics.summary || {}),
     },
-
     data: (backendAnalytics.data || []).map((row) => ({
-
-      principle: row.principle_code,
-
-      project: row.project_id,
-
-      period: row.reporting_period_id,
-
+      principle: row.principle_code || row.principle,
+      project: row.project_id || row.project,
+      period: row.reporting_period_id || row.period,
       indicators: row.indicators || [],
-
       values: row.values || {},
-
-      status: row.status?.toLowerCase() || 'draft',
-
+      status: String(row.status || 'draft').toLowerCase(),
     })),
-
     trends: (backendAnalytics.trends || []).map((trend) => ({
-
       period: trend.period,
-
       value: trend.value,
-
-      indicator: trend.indicator_code,
-
+      indicator: trend.indicator_code || trend.indicator,
     })),
-
   };
-
 }
 
 

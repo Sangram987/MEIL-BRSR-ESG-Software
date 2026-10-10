@@ -15,9 +15,12 @@ def register_blueprints(app):
     from app.routes.notifications import bp as notifications_bp
     from app.routes.disclosures import bp as disclosures_bp
     from app.routes.evidence import bp as evidence_bp
+    from app.routes.verigraph_evidence import bp as verigraph_evidence_bp
+    from app.routes.capa import bp as capa_bp
 
     for bp in (
         auth_bp, organization_bp, brsr_bp, submissions_bp, approvals_bp, vendors_bp, risk_bp,
         analytics_bp, ai_bp, assessment_bp, reports_bp, notifications_bp, disclosures_bp, evidence_bp,
+        verigraph_evidence_bp, capa_bp,
     ):
         app.register_blueprint(bp, url_prefix=prefix + bp.url_prefix if bp.url_prefix else prefix)

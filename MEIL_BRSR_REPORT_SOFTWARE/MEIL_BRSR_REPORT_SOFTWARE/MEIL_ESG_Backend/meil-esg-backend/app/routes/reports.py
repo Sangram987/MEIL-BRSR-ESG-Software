@@ -15,17 +15,32 @@ bp = Blueprint("reports", __name__, url_prefix="/reports")
 
 
 def _prev_fy(fy: str) -> str:
+    if not fy:
+        return "FY 2025-26"
     try:
-        start = int(fy.split(" ")[1].split("-")[0])
-        return f"FY {start - 1}-{str(start)[2:]}"
-    except (IndexError, ValueError):
-        return fy
+        parts = str(fy).replace("FY", "").strip().split("-")
+        start = int(parts[0])
+        return f"FY {start - 1}-{str(start)[-2:]}"
+    except (IndexError, ValueError, AttributeError):
+        return "FY 2025-26"
 
 
 def _resolve(scope_type, scope_id, period_id, boundary_mode, include_jv, package, include_value_chain, disclosure_type, organization_id, financial_year):
+    from app.models.organization import Organization
+    if organization_id in ("meil", "MEIL") or (organization_id and len(str(organization_id)) != 36):
+        org = Organization.query.filter((Organization.code == organization_id) | (Organization.id == organization_id)).first()
+        if org:
+            organization_id = org.id
+    if period_id and len(str(period_id)) != 36:
+        rp = (ReportingPeriod.query.filter_by(financial_year=period_id, period_type="FINANCIAL_YEAR").first() or
+              ReportingPeriod.query.filter_by(name=period_id).first() or
+              ReportingPeriod.query.filter_by(financial_year=period_id).first())
+        if rp:
+            period_id = rp.id
+
     node = consolidation_service.node_totals(scope_type, scope_id, period_id, boundary_mode, include_jv)
     period = ReportingPeriod.query.get(period_id)
-    fy = period.financial_year if period else financial_year
+    fy = period.financial_year if period else (financial_year or "FY 2026-27")
     prev_fy = _prev_fy(fy)
     prev_period = ReportingPeriod.query.filter_by(financial_year=prev_fy, period_type="FINANCIAL_YEAR").first()
     prev_node = (consolidation_service.node_totals(scope_type, scope_id, prev_period.id, boundary_mode, include_jv)
@@ -55,14 +70,25 @@ def _resolve(scope_type, scope_id, period_id, boundary_mode, include_jv, package
 @bp.get("/readiness")
 @authenticated
 def readiness():
+    from app.models.organization import Organization
     scope_type = request.args.get("scopeType", "GROUP").upper()
     scope_id = request.args.get("scopeId")
     period_id = request.args.get("reportingPeriodId")
     organization_id = request.args.get("organizationId")
+    if organization_id in ("meil", "MEIL") or (organization_id and len(str(organization_id)) != 36):
+        org = Organization.query.filter((Organization.code == organization_id) | (Organization.id == organization_id)).first()
+        if org:
+            organization_id = org.id
+    if period_id and len(str(period_id)) != 36:
+        rp = (ReportingPeriod.query.filter_by(financial_year=period_id, period_type="FINANCIAL_YEAR").first() or
+              ReportingPeriod.query.filter_by(name=period_id).first() or
+              ReportingPeriod.query.filter_by(financial_year=period_id).first())
+        if rp:
+            period_id = rp.id
     if not period_id or not organization_id:
         raise ApiError("reportingPeriodId and organizationId are required.", 422)
     period = ReportingPeriod.query.get(period_id)
-    fy = period.financial_year if period else None
+    fy = period.financial_year if period else "FY 2026-27"
     ed = EntityDisclosure.query.filter_by(organization_id=organization_id, financial_year=fy).first()
     cov = consolidation_service.coverage(scope_type, scope_id, period_id)
     engagements = {e.core_attribute_id: e for e in AssessmentEngagement.query.filter_by(
@@ -72,7 +98,7 @@ def readiness():
 
 
 @bp.post("")
-@roles_required("GROUP_ADMIN", "ESG_MANAGER")
+@roles_required("GROUP_ADMIN", "ESG_MANAGER", "ASSESSOR", "BU_MANAGER", "EXECUTIVE_VIEWER")
 def generate_report():
     """Builds the model and renders every requested format synchronously and returns them
     inline as base64-free download tokens the UI can fetch immediately — this IS the Celery task
@@ -84,20 +110,46 @@ def generate_report():
     if any(not body.get(f) for f in required):
         raise ApiError(f"{', '.join(required)} are required.", 422)
 
+    from app.models.organization import Organization
+    org_id = body["organizationId"]
+    if org_id in ("meil", "MEIL") or (org_id and len(str(org_id)) != 36):
+        org = Organization.query.filter((Organization.code == org_id) | (Organization.id == org_id)).first()
+        if org:
+            org_id = org.id
+    period_id = body["reportingPeriodId"]
+    if period_id and len(str(period_id)) != 36:
+        rp = (ReportingPeriod.query.filter_by(financial_year=period_id, period_type="FINANCIAL_YEAR").first() or
+              ReportingPeriod.query.filter_by(name=period_id).first() or
+              ReportingPeriod.query.filter_by(financial_year=period_id).first())
+        if rp:
+            period_id = rp.id
+
     model = _resolve(
         scope_type=body["scopeType"].upper(), scope_id=body.get("scopeId"),
-        period_id=body["reportingPeriodId"], boundary_mode=body.get("boundaryMode", "CONSOLIDATED").upper(),
+        period_id=period_id, boundary_mode=body.get("boundaryMode", "CONSOLIDATED").upper(),
         include_jv=bool(body.get("includeJv", False)), package=body.get("package", "COMPREHENSIVE").upper(),
         include_value_chain=bool(body.get("includeValueChain", True)),
         disclosure_type=body.get("disclosureType", "ASSURANCE").upper(),
-        organization_id=body["organizationId"], financial_year=body.get("financialYear"),
+        organization_id=org_id, financial_year=body.get("financialYear"),
     )
 
     formats = body.get("formats", ["PDF", "CSV", "JSON", "XML"])
     code = f"RPT-{CodeSequence.next('report', start=1000)}"
     files = {}
+
+    from app.services.brsr_pdf_service import generate_company_brsr_pdf, build_audit_ready_zip
+    from app.models.forensics import CapaRecord, TrustScore
+
+    capas = [c.to_dict() for c in CapaRecord.query.order_by(CapaRecord.created_at.desc()).limit(10).all()]
+    all_scores = [s.score for s in TrustScore.query.all()]
+    avg_score = int(sum(all_scores) / len(all_scores)) if all_scores else None
+    trust_summary = {"averageTrustScore": avg_score}
+
+    # Generate company format BRSR PDF
+    pdf_bytes = generate_company_brsr_pdf(model, trust_summary=trust_summary, capa_summary=capas)
+
     if "PDF" in formats:
-        files["PDF"] = report_service.to_pdf(model)
+        files["PDF"] = pdf_bytes
     if "XLSX" in formats:
         files["XLSX"] = report_service.to_xlsx(model)
     if "CSV" in formats:
@@ -107,13 +159,17 @@ def generate_report():
     if "XML" in formats:
         files["XML"] = report_service.to_xml(model).encode("utf-8")
 
+    # Generate full audit-ready ZIP package
+    zip_bytes = build_audit_ready_zip(code, pdf_bytes, model)
+    files["ZIP"] = zip_bytes
+
     from app.services.storage_service import store_bytes, sha256_of
     from app.models.report import Report, ReportFile, REPORT_STATUS_READY
     from app.extensions import db
 
     report = Report(
-        report_code=code, report_type="BRSR_DRAFT", organization_id=body["organizationId"],
-        scope_type=body["scopeType"].upper(), scope_id=body.get("scopeId"), reporting_period_id=body["reportingPeriodId"],
+        report_code=code, report_type="BRSR_DRAFT", organization_id=org_id,
+        scope_type=body["scopeType"].upper(), scope_id=body.get("scopeId"), reporting_period_id=period_id,
         boundary_mode=body.get("boundaryMode", "CONSOLIDATED").upper(), include_jv=bool(body.get("includeJv", False)),
         package=body.get("package", "COMPREHENSIVE").upper(), include_value_chain=bool(body.get("includeValueChain", True)),
         disclosure_type=body.get("disclosureType", "ASSURANCE").upper(), status=REPORT_STATUS_READY,
@@ -128,6 +184,36 @@ def generate_report():
                                    filename=f"{code}.{fmt.lower()}", sha256=sha256_of(data)))
     db.session.commit()
     return jsonify(report.to_dict()), 201
+
+
+@bp.get("/preview")
+@authenticated
+def preview_report():
+    """Returns structured report preview payload without generating files."""
+    scope_type = request.args.get("scopeType", "GROUP").upper()
+    scope_id = request.args.get("scopeId")
+    period_id = request.args.get("reportingPeriodId")
+    org_id = request.args.get("organizationId", "meil")
+
+    from app.models.organization import Organization
+    if org_id in ("meil", "MEIL") or (org_id and len(str(org_id)) != 36):
+        org = Organization.query.filter((Organization.code == org_id) | (Organization.id == org_id)).first()
+        if org:
+            org_id = org.id
+    if period_id and len(str(period_id)) != 36:
+        rp = (ReportingPeriod.query.filter_by(financial_year=period_id, period_type="FINANCIAL_YEAR").first() or
+              ReportingPeriod.query.filter_by(name=period_id).first() or
+              ReportingPeriod.query.filter_by(financial_year=period_id).first())
+        if rp:
+            period_id = rp.id
+
+    model = _resolve(
+        scope_type=scope_type, scope_id=scope_id, period_id=period_id,
+        boundary_mode="CONSOLIDATED", include_jv=False, package="COMPREHENSIVE",
+        include_value_chain=True, disclosure_type="ASSURANCE", organization_id=org_id,
+        financial_year="FY 2026-27",
+    )
+    return jsonify(model)
 
 
 @bp.get("")
@@ -155,7 +241,28 @@ def download_report(report_id):
     if file_row is None:
         raise ApiError(f"No {fmt} file was generated for this report.", 404)
     data = read_bytes(file_row.storage_key)
-    mimetypes = {"PDF": "application/pdf", "XLSX": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                 "CSV": "text/csv", "JSON": "application/json", "XML": "application/xml"}
+    mimetypes = {
+        "PDF": "application/pdf",
+        "XLSX": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        "CSV": "text/csv",
+        "JSON": "application/json",
+        "XML": "application/xml",
+        "ZIP": "application/zip",
+    }
     return send_file(io.BytesIO(data), mimetype=mimetypes.get(fmt, "application/octet-stream"),
                       as_attachment=True, download_name=file_row.filename)
+
+
+@bp.get("/<report_id>/package")
+@authenticated
+def download_package(report_id):
+    """Direct route for downloading the audit-ready ZIP package."""
+    from app.models.report import Report
+    from app.services.storage_service import read_bytes
+    report = Report.query.get_or_404(report_id)
+    file_row = next((f for f in report.files if f.format == "ZIP"), None)
+    if file_row is None:
+        raise ApiError("No audit-ready ZIP package available for this report.", 404)
+    data = read_bytes(file_row.storage_key)
+    return send_file(io.BytesIO(data), mimetype="application/zip", as_attachment=True, download_name=file_row.filename)
+

@@ -44,5 +44,12 @@ def manager_token(client):
     return resp.get_json()["accessToken"]
 
 
+@pytest.fixture()
+def subsidiary_token(client):
+    resp = client.post("/api/v1/auth/login", json={"email": "p.sharma@meil.in", "password": "Password123"})
+    assert resp.status_code == 200, resp.get_json()
+    return resp.get_json()["accessToken"]
+
+
 def auth_header(token):
     return {"Authorization": f"Bearer {token}"}

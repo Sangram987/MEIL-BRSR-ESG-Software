@@ -87,3 +87,16 @@ def material_issues():
     include_in_brsr=True, keyed to their qualitative (not ₹) financial implication."""
     rows = Risk.query.filter_by(include_in_brsr=True).all()
     return jsonify([r.to_dict() for r in rows])
+
+
+@bp.delete("/<risk_id>")
+@roles_required("GROUP_ADMIN", "ESG_MANAGER", "BU_MANAGER")
+def delete_risk(risk_id):
+    risk = Risk.query.get_or_404(risk_id)
+    code = risk.risk_code
+    title = risk.title
+    db.session.delete(risk)
+    record("RISK_DELETED", "Risk", code, details=title)
+    db.session.commit()
+    return jsonify({"success": True, "message": f"Risk {code} deleted."})
+

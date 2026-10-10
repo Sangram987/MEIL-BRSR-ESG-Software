@@ -90,52 +90,28 @@ export const disclosureApi = {
 
 
   async getBrsrFrameworks() {
-    const response =
-      await apiClient.get(
-        '/brsr/frameworks'
-      );
-
-    return response.data?.items || [];
+    const response = await apiClient.get('/brsr/frameworks');
+    return Array.isArray(response.data) ? response.data : (response.data?.items || []);
   },
-
 
   async getBrsrPrinciples() {
-    const response =
-      await apiClient.get(
-        '/brsr/principles'
-      );
-
-    return response.data?.items || [];
+    const response = await apiClient.get('/brsr/principles');
+    return Array.isArray(response.data) ? response.data : (response.data?.items || []);
   },
 
-
-  async getBrsrIndicators(
-    principleCode = null
-  ) {
+  async getBrsrIndicators(principleCode = null) {
     const params = {};
-
     if (principleCode) {
-      params.principleCode =
-        principleCode;
+      params.principleCode = principleCode;
+      params.principle = principleCode;
     }
-
-    const response =
-      await apiClient.get(
-        '/brsr/indicators',
-        { params }
-      );
-
-    return response.data?.items || [];
+    const response = await apiClient.get('/brsr/indicators', { params });
+    return Array.isArray(response.data) ? response.data : (response.data?.items || []);
   },
-
 
   async getSdgMapping() {
-    const response =
-      await apiClient.get(
-        '/brsr/sdg-mapping'
-      );
-
-    return response.data?.mappings || [];
+    const response = await apiClient.get('/brsr/sdg-mapping');
+    return Array.isArray(response.data) ? response.data : (response.data?.mappings || response.data?.items || []);
   },
 };
 

@@ -15,9 +15,9 @@ export const vendorApi = {
       if (filters.status) params.status = filters.status;
       
       const response = await apiClient.get('/vendors', { params });
-      return response.data.items || [];
+      return Array.isArray(response.data) ? response.data : (response.data.items || []);
     } catch (error) {
-      const message = error.response?.data?.error?.message || 'Failed to fetch vendors.';
+      const message = error.response?.data?.error?.message || error.response?.data?.message || 'Failed to fetch vendors.';
       throw new Error(message);
     }
   },
@@ -30,7 +30,7 @@ export const vendorApi = {
       const response = await apiClient.get(`/vendors/${vendorId}`);
       return response.data;
     } catch (error) {
-      const message = error.response?.data?.error?.message || 'Failed to fetch vendor.';
+      const message = error.response?.data?.error?.message || error.response?.data?.message || 'Failed to fetch vendor.';
       throw new Error(message);
     }
   },
@@ -46,12 +46,13 @@ export const vendorApi = {
       if (filters.reportingPeriodId) params.reportingPeriodId = filters.reportingPeriodId;
       
       const response = await apiClient.get('/vendor-requests', { params });
+      const rawItems = Array.isArray(response.data) ? response.data : (response.data.items || []);
       return {
-        items: (response.data.items || []).map(mapVendorRequest),
-        meta: response.data.meta,
+        items: rawItems.map(mapVendorRequest),
+        meta: response.data.meta || { total: rawItems.length },
       };
     } catch (error) {
-      const message = error.response?.data?.error?.message || 'Failed to fetch vendor requests.';
+      const message = error.response?.data?.error?.message || error.response?.data?.message || 'Failed to fetch vendor requests.';
       throw new Error(message);
     }
   },
@@ -64,7 +65,7 @@ export const vendorApi = {
       const response = await apiClient.get(`/vendor-requests/${vendorRequestId}`);
       return mapVendorRequest(response.data);
     } catch (error) {
-      const message = error.response?.data?.error?.message || 'Failed to fetch vendor request.';
+      const message = error.response?.data?.error?.message || error.response?.data?.message || 'Failed to fetch vendor request.';
       throw new Error(message);
     }
   },
@@ -74,15 +75,16 @@ export const vendorApi = {
    */
   async sendVendorRequests(vendorIds, reportingPeriodId, dueDate, message = '') {
     try {
-      const response = await apiClient.post('/vendor-requests/send', {
+      const response = await apiClient.post('/vendor-requests', {
         vendorIds,
         reportingPeriodId,
         dueDate,
         message,
       });
-      return (response.data.items || []).map(mapVendorRequest);
+      const items = Array.isArray(response.data) ? response.data : (response.data.items || []);
+      return items.map(mapVendorRequest);
     } catch (error) {
-      const message = error.response?.data?.error?.message || 'Failed to send vendor requests.';
+      const message = error.response?.data?.error?.message || error.response?.data?.message || 'Failed to send vendor requests.';
       throw new Error(message);
     }
   },
@@ -90,15 +92,19 @@ export const vendorApi = {
   /**
    * Submit vendor data (vendor-side)
    */
-  async submitVendorData(vendorRequestId, values, documentIds = []) {
+  async submitVendorData(vendorRequestId, values, evidence = {}) {
     try {
+      let evidencePayload = {};
+      if (typeof evidence === 'object' && evidence !== null && !Array.isArray(evidence)) {
+        evidencePayload = evidence;
+      }
       const response = await apiClient.post(`/vendor-requests/${vendorRequestId}/submit`, {
         values,
-        documentIds,
+        evidence: evidencePayload,
       });
       return mapVendorRequest(response.data);
     } catch (error) {
-      const message = error.response?.data?.error?.message || 'Failed to submit vendor data.';
+      const message = error.response?.data?.error?.message || error.response?.data?.message || 'Failed to submit vendor data.';
       throw new Error(message);
     }
   },
@@ -108,13 +114,14 @@ export const vendorApi = {
    */
   async reviewVendorSubmission(vendorRequestId, decision, comment = '') {
     try {
+      const decisionNormalized = String(decision || '').toUpperCase() === 'ACCEPT' ? 'ACCEPT' : 'CORRECTION_REQUIRED';
       const response = await apiClient.post(`/vendor-requests/${vendorRequestId}/review`, {
-        decision, // 'accept' | 'correction_required'
+        decision: decisionNormalized,
         comment,
       });
       return mapVendorRequest(response.data);
     } catch (error) {
-      const message = error.response?.data?.error?.message || 'Failed to review vendor submission.';
+      const message = error.response?.data?.error?.message || error.response?.data?.message || 'Failed to review vendor submission.';
       throw new Error(message);
     }
   },

@@ -13,7 +13,10 @@ from flask_jwt_extended import (
 )
 
 from app.extensions import db, limiter
-from app.models.user import User, Role, UserRole, UserScope, SCOPE_GROUP, SCOPE_PROJECT, SCOPE_BUSINESS_UNIT, SCOPE_VENDOR
+from app.models.user import (
+    User, Role, UserRole, UserScope,
+    SCOPE_GROUP, SCOPE_SUBSIDIARY, SCOPE_BUSINESS_UNIT, SCOPE_PROJECT, SCOPE_VENDOR,
+)
 from app.models.organization import Organization
 from app.schemas.auth import LoginSchema, RegisterSchema, ChangePasswordSchema
 from app.security.passwords import hash_password, verify_password
@@ -83,6 +86,10 @@ def _grant_default_scope(user, role_code):
     group = Organization.query.filter_by(type="GROUP").first()
     if role_code in ("GROUP_ADMIN", "ESG_MANAGER", "ASSESSOR", "EXECUTIVE_VIEWER") and group:
         db.session.add(UserScope(user_id=user.id, scope_type=SCOPE_GROUP, scope_id=group.id))
+    elif role_code == "SUBSIDIARY_HEAD":
+        sub = Organization.query.filter_by(type="SUBSIDIARY").first()
+        if sub:
+            db.session.add(UserScope(user_id=user.id, scope_type=SCOPE_SUBSIDIARY, scope_id=sub.id))
     elif role_code == "BU_MANAGER":
         bu = BusinessUnit.query.first()
         if bu:

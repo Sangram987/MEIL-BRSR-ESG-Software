@@ -97,71 +97,54 @@ apiClient.interceptors.response.use(
   async (error) => {
 
     const originalRequest = error.config;
+    const requestUrl = originalRequest?.url || '';
+    const isAuthEndpoint = requestUrl.includes('/auth/login') ||
+                           requestUrl.includes('/auth/refresh') ||
+                           requestUrl.includes('/auth/register');
 
-
-
-    if (error.response?.status === 401 && !originalRequest._retry) {
+    if (error.response?.status === 401 && !originalRequest._retry && !isAuthEndpoint) {
+      const token = sessionStorage.getItem('accessToken');
+      if (!token) {
+        sessionStorage.removeItem('currentUser');
+        if (window.location.pathname !== '/login') {
+          window.location.href = '/login';
+        }
+        return Promise.reject(error);
+      }
 
       if (isRefreshing) {
-
         return new Promise((resolve, reject) => {
-
           failedQueue.push({ resolve, reject });
-
         })
-
-          .then((token) => {
-
-            originalRequest.headers.Authorization = `Bearer ${token}`;
-
+          .then((newToken) => {
+            originalRequest.headers.Authorization = `Bearer ${newToken}`;
             return apiClient(originalRequest);
-
           })
-
           .catch((err) => Promise.reject(err));
-
       }
-
-
 
       originalRequest._retry = true;
-
       isRefreshing = true;
 
-
-
       try {
-
         const response = await axios.post(`${API_BASE_URL}/auth/refresh`, {}, { withCredentials: true });
-
         const { accessToken } = response.data;
-
         sessionStorage.setItem('accessToken', accessToken);
-
         apiClient.defaults.headers.common.Authorization = `Bearer ${accessToken}`;
-
         originalRequest.headers.Authorization = `Bearer ${accessToken}`;
-
         processQueue(null, accessToken);
-
         return apiClient(originalRequest);
-
       } catch (refreshError) {
-
         processQueue(refreshError, null);
-
         sessionStorage.removeItem('accessToken');
-
-        window.location.href = '/login';
-
+        sessionStorage.removeItem('currentUser');
+        if (window.location.pathname !== '/login') {
+          window.location.href = '/login';
+        }
         return Promise.reject(refreshError);
-
       } finally {
-
         isRefreshing = false;
-
       }
-
     }
 
 

@@ -4,6 +4,9 @@ const STATUS_MAP = {
   DRAFT: 'draft',
   SUBMITTED: 'submitted',
   UNDER_REVIEW: 'under_review',
+  BU_VERIFIED: 'bu_verified',
+  SUBSIDIARY_VERIFIED: 'subsidiary_verified',
+  SUB_VERIFIED: 'subsidiary_verified',
   CORRECTION_REQUIRED: 'correction_required',
   REJECTED: 'rejected',
   APPROVED: 'approved',
@@ -220,6 +223,64 @@ const approvalsApi = {
         getError(
           error,
           'Failed to fetch approval.'
+        )
+      );
+    }
+  },
+
+
+  async verifySubmission(
+    submissionId,
+    comment = '',
+    checklist = {}
+  ) {
+    try {
+      const response =
+        await apiClient.post(
+          `/approvals/${submissionId}/verify`,
+          {
+            comment,
+            checklist,
+          }
+        );
+
+      return mapSubmission(
+        response.data
+      );
+    } catch (error) {
+      throw new Error(
+        getError(
+          error,
+          'Failed to verify submission.'
+        )
+      );
+    }
+  },
+
+
+  async verifySubsidiarySubmission(
+    submissionId,
+    comment = '',
+    checklist = {}
+  ) {
+    try {
+      const response =
+        await apiClient.post(
+          `/approvals/${submissionId}/verify-subsidiary`,
+          {
+            comment,
+            checklist,
+          }
+        );
+
+      return mapSubmission(
+        response.data
+      );
+    } catch (error) {
+      throw new Error(
+        getError(
+          error,
+          'Failed to verify subsidiary submission.'
         )
       );
     }

@@ -84,6 +84,11 @@ export const submissionApi = {
       response.data.items || []
     ).map(mapSubmission);
   },
+
+  async listReportingPeriods() {
+    const response = await apiClient.get('/reporting-periods');
+    return Array.isArray(response.data) ? response.data : (response.data?.items || []);
+  },
 };
 
 export default submissionApi;

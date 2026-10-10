@@ -6,49 +6,87 @@ import { PRINCIPLES, CURRENT_PERIOD, periodLabel } from '../../data/brsr';
 import { StatusBadge, Card, Progress, dt } from '../../components/ui';
 
 const QUICK = [
-  { label: 'Log fuel / emissions', to: 'P6', icon: Flame, c: 'amber' }, { label: 'Log water usage', to: 'P6', icon: Droplets, c: 'sky' },
-  { label: 'Log safety incident', to: 'P3', icon: ShieldPlus, c: 'rose' }, { label: 'Upload utility bills', to: 'P6', icon: UploadCloud, c: 'indigo', dashed: true },
+  { label: 'Camera / Invoice Forensics', to: '/operator/evidence', isDirect: true, icon: UploadCloud, c: 'emerald' },
+  { label: 'Log fuel / emissions', to: 'P6', icon: Flame, c: 'amber' },
+  { label: 'Log water usage', to: 'P6', icon: Droplets, c: 'sky' },
+  { label: 'Log safety incident', to: 'P3', icon: ShieldPlus, c: 'rose' },
 ];
-const TONE = { amber: 'hover:border-amber-400 hover:bg-amber-50 bg-amber-100 text-amber-600', sky: 'hover:border-sky-400 hover:bg-sky-50 bg-sky-100 text-sky-600', rose: 'hover:border-rose-400 hover:bg-rose-50 bg-rose-100 text-rose-600', indigo: 'hover:border-indigo-400 hover:bg-indigo-50 bg-indigo-100 text-indigo-600' };
+const TONE = {
+  emerald: 'hover:border-emerald-400 hover:bg-emerald-50/60 bg-emerald-100/70 text-emerald-700',
+  amber: 'hover:border-amber-400 hover:bg-amber-50/60 bg-amber-100/70 text-amber-700',
+  sky: 'hover:border-sky-400 hover:bg-sky-50/60 bg-sky-100/70 text-sky-700',
+  rose: 'hover:border-rose-400 hover:bg-rose-50/60 bg-rose-100/70 text-rose-700',
+  indigo: 'hover:border-indigo-400 hover:bg-indigo-50/60 bg-indigo-100/70 text-indigo-700'
+};
 
 export default function OperatorPortal() {
   const { user, org, calc } = useApp();
   const navigate = useNavigate();
-  const project = org.projects.find((p) => p.id === user.projectId);
-  const status = calc.projectStatus(project.id, CURRENT_PERIOD);
+  const project = org.projects.find((p) => p.id === user?.projectId)
+    || org.projects.find((p) => p.name === 'Zojila Tunnel Package 1')
+    || org.projects[0]
+    || { id: 'prj-001', name: 'Zojila Tunnel Package 1', buId: 'bu-tunnel', subId: 'sub-infra' };
+  const status = calc.projectStatus(project.id, CURRENT_PERIOD) || {};
   const mine = calc.submissions.filter((s) => s.projectId === project.id);
   const done = Object.values(status).filter((s) => s === 'approved' || s === 'submitted').length;
   const score = Math.round((done / PRINCIPLES.length) * 100);
   const fixes = mine.filter((s) => (s.status === 'correction_required' || s.status === 'rejected') && s.period === CURRENT_PERIOD);
   const activity = mine.flatMap((s) => s.history.map((h) => ({ ...h, s }))).sort((a, b) => new Date(b.at) - new Date(a.at)).slice(0, 6);
-  const go = (p) => navigate(`/operator/data-entry?principle=${p}`);
+  const go = (p, isDirect) => {
+    if (isDirect) {
+      navigate(p);
+    } else {
+      navigate(`/operator/data-entry?principle=${p}`);
+    }
+  };
   const cta = { none: 'Enter data', draft: 'Continue draft', correction_required: 'Fix & re-submit', rejected: 'Fix & re-submit', submitted: 'View', approved: 'View' };
+
+  const buName = calc.buById.get(project.buId)?.name || 'Tunnels & Transit Division';
+  const subName = calc.subById.get(project.subId)?.name || 'MEIL Infrastructure & Utilities';
 
   return (
     <div className="space-y-6">
-      <div className="bg-slate-900 rounded-2xl p-6 sm:p-8 shadow-lg text-white relative overflow-hidden">
-        <HardHat size={250} className="absolute right-0 top-0 opacity-10 pointer-events-none translate-x-1/4 -translate-y-1/4" />
+      {/* Polished Hero Banner */}
+      <div className="bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 rounded-2xl p-6 sm:p-8 shadow-md border border-slate-800 text-white relative overflow-hidden">
+        <HardHat size={240} className="absolute right-0 top-0 opacity-10 pointer-events-none translate-x-1/4 -translate-y-1/4" />
         <div className="relative z-10 flex flex-col md:flex-row md:items-end justify-between gap-6">
           <div>
-            <div className="inline-flex px-3 py-1 rounded-md bg-emerald-500/20 text-emerald-400 text-xs font-bold mb-3 border border-emerald-500/30">Active site workspace</div>
-            <h1 className="text-3xl font-black tracking-tight mb-1">{project.name}</h1>
-            <p className="text-sm text-slate-400">{calc.buById.get(project.buId).name} · {calc.subById.get(project.subId).name} · {user.name} · {periodLabel(CURRENT_PERIOD)}</p>
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-400 text-xs font-bold mb-3 border border-emerald-500/30">
+              <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
+              Active Site Workspace
+            </div>
+            <h1 className="text-2xl sm:text-3xl font-black tracking-tight mb-1">{project.name}</h1>
+            <p className="text-sm text-slate-300 font-medium">
+              {buName} · {subName} · <span className="text-emerald-400 font-bold">{user?.name || 'Site Operator'}</span> · {periodLabel(CURRENT_PERIOD)}
+            </p>
           </div>
-          <div className="bg-slate-800/60 p-4 rounded-xl border border-slate-700 min-w-[260px]">
-            <p className="text-xs font-bold text-slate-400 mb-1">Monthly BRSR reporting · due 5 Oct 2026</p>
-            <div className="flex items-center gap-3"><span className="text-3xl font-black text-emerald-400">{score}%</span><div className="flex-1"><Progress value={score} className="!bg-slate-700" /></div></div>
-            <p className="text-[11px] text-slate-400 mt-1">{done} of 9 principles submitted or approved</p>
+          <div className="bg-slate-800/80 backdrop-blur-sm p-4 rounded-xl border border-slate-700 min-w-[260px] shadow-sm">
+            <p className="text-xs font-bold text-slate-300 mb-1">Monthly BRSR Progress · {periodLabel(CURRENT_PERIOD)}</p>
+            <div className="flex items-center gap-3">
+              <span className="text-3xl font-black text-emerald-400">{score}%</span>
+              <div className="flex-1">
+                <Progress value={score} className="!bg-slate-700" />
+              </div>
+            </div>
+            <p className="text-[11px] text-slate-400 mt-1 font-medium">{done} of 9 principles submitted or approved</p>
           </div>
         </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-6">
+          {/* Quick Action Tiles */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
             {QUICK.map((q) => (
-              <button key={q.label} onClick={() => go(q.to)} className={`bg-white border-2 border-slate-200 ${TONE[q.c].split(' ').slice(0, 2).join(' ')} rounded-2xl p-4 flex flex-col items-center gap-3 transition shadow-sm ${q.dashed ? 'border-dashed' : ''}`}>
-                <span className={`h-12 w-12 rounded-full flex items-center justify-center ${TONE[q.c].split(' ').slice(2).join(' ')}`}><q.icon size={24} /></span>
-                <span className="text-xs font-bold text-slate-700 text-center">{q.label}</span>
+              <button
+                key={q.label}
+                onClick={() => go(q.to, q.isDirect)}
+                className={`bg-white border border-slate-200/90 hover:shadow-md ${TONE[q.c].split(' ').slice(0, 2).join(' ')} rounded-2xl p-4 flex flex-col items-center gap-3 transition shadow-xs group`}
+              >
+                <span className={`h-12 w-12 rounded-xl flex items-center justify-center transition-transform group-hover:scale-110 ${TONE[q.c].split(' ').slice(2).join(' ')}`}>
+                  <q.icon size={22} />
+                </span>
+                <span className="text-xs font-bold text-slate-700 text-center leading-snug">{q.label}</span>
               </button>
             ))}
           </div>

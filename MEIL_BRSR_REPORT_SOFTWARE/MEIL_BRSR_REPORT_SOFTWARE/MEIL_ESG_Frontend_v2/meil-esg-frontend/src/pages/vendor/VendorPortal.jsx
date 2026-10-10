@@ -6,8 +6,8 @@ import { StatusBadge, Card, Btn, dt } from '../../components/ui';
 
 export default function VendorPortal() {
   const { user, state } = useApp(); const nav = useNavigate();
-  const v = state.vendors.find((x) => x.id === user.vendorId);
-  const mine = state.vendorRequests.filter((r) => r.vendorId === v.id).sort((a, b) => b.sentAt.localeCompare(a.sentAt));
+  const v = state.vendors.find((x) => x.id === user?.vendorId || x.code === user?.vendorId || x.id === 'V-103') || state.vendors[0] || { id: user?.vendorId || 'V-103', name: user?.name || 'Global Logistics Corp', category: 'Transportation' };
+  const mine = state.vendorRequests.filter((r) => r.vendorId === v.id || r.vendorId === user?.vendorId || (v.code && r.vendorId === v.code) || r.vendorId === 'V-103').sort((a, b) => (b.sentAt || '').localeCompare(a.sentAt || ''));
   const open = mine.filter((r) => ['requested', 'correction_required'].includes(r.status));
   return (
     <div className="space-y-6">

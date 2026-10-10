@@ -23,7 +23,7 @@ def principles():
 @bp.get("/indicators")
 @authenticated
 def indicators():
-    principle_code = request.args.get("principle")
+    principle_code = request.args.get("principle") or request.args.get("principleCode")
     q = BrsrIndicator.query.filter_by(active=True)
     if principle_code:
         q = q.join(BrsrPrinciple).filter(BrsrPrinciple.code == principle_code)

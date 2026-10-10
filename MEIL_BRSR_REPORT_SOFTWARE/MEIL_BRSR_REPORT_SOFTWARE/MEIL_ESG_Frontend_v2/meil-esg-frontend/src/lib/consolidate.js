@@ -27,11 +27,16 @@ export const boundaryOk = (sub, b) => {
 };
 
 export function createCalc(org, submissions) {
-  const projById = new Map(org.projects.map((p) => [p.id, p]));
-  const subById = new Map(org.subsidiaries.map((s) => [s.id, s]));
-  const buById = new Map(org.bus.map((b) => [b.id, b]));
+  const safeProjects = org?.projects || [];
+  const safeSubsidiaries = org?.subsidiaries || [];
+  const safeBus = org?.bus || [];
+  const safeSubmissions = Array.isArray(submissions) ? submissions : [];
+
+  const projById = new Map(safeProjects.map((p) => [p.id, p]));
+  const subById = new Map(safeSubsidiaries.map((s) => [s.id, s]));
+  const buById = new Map(safeBus.map((b) => [b.id, b]));
   const approved = new Map(), byKey = new Map();
-  submissions.forEach((s) => {
+  safeSubmissions.forEach((s) => {
     byKey.set(`${s.projectId}|${s.period}|${s.principle}`, s);
     if (s.status === 'approved') approved.set(`${s.projectId}|${s.period}|${s.principle}`, s);
   });
@@ -127,7 +132,7 @@ export function createCalc(org, submissions) {
   };
 
   function coverage(scope, period, boundary) {
-    const counts = { approved: 0, submitted: 0, correction_required: 0, draft: 0, rejected: 0, none: 0 };
+    const counts = { approved: 0, subsidiary_verified: 0, bu_verified: 0, submitted: 0, correction_required: 0, draft: 0, rejected: 0, none: 0 };
     const list = projectsIn(scope, boundary);
     list.forEach((p) => Object.values(projectStatus(p.id, period)).forEach((st) => { counts[st] = (counts[st] || 0) + 1; }));
     const expected = list.length * PRINCIPLES.length;

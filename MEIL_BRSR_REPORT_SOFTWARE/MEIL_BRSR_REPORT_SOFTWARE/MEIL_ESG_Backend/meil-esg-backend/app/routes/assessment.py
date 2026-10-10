@@ -66,6 +66,16 @@ def issue_opinion(core_attribute_id):
     period_id, org_id = body.get("reportingPeriodId"), body.get("organizationId")
     if not period_id or not org_id:
         raise ApiError("reportingPeriodId and organizationId are required.", 422)
+    if org_id in ("meil", "MEIL") or (org_id and len(str(org_id)) != 36):
+        from app.models.organization import Organization
+        org = Organization.query.filter((Organization.code == org_id) | (Organization.id == org_id)).first()
+        if org:
+            org_id = org.id
+    if period_id and len(str(period_id)) != 36:
+        from app.models.period import ReportingPeriod
+        rp = ReportingPeriod.query.filter_by(financial_year=period_id, period_type="FINANCIAL_YEAR").first() or ReportingPeriod.query.filter_by(name=period_id).first()
+        if rp:
+            period_id = rp.id
     data = AssessmentOpinionSchema().load(body)
     validate_engagement_payload(data)   # raises ApiError on independence-rule violation
 

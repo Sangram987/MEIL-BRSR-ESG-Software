@@ -11,21 +11,31 @@ import { Card, CardHeader, Btn, Badge, StatusBadge, Progress } from '../../compo
 export default function ManagerPortal() {
   const { user, calc, ui, org, actions, toast } = useApp();
   const nav = useNavigate();
-  const bu = calc.buById.get(user.buId);
-  const scope = { level: 'bu', id: user.buId };
-  const projects = org.projects.filter((p) => p.buId === user.buId);
+  const bu = calc.buById.get(user?.buId)
+    || calc.buById.get('bu-tunnel')
+    || Array.from(calc.buById.values())[0]
+    || { id: 'bu-tunnel', subId: 'sub-infra', name: 'Tunnels & Transit Division' };
+  const buId = bu.id;
+  const scope = { level: 'bu', id: buId };
+  const projects = org.projects.filter((p) => p.buId === user?.buId || p.buId === buId);
   const cov = calc.coverage(scope, CURRENT_PERIOD, ui.boundary);
-  const mine = calc.submissions.filter((s) => calc.projById.get(s.projectId)?.buId === user.buId);
+  const mine = calc.submissions.filter((s) => {
+    const projBuId = calc.projById.get(s.projectId)?.buId;
+    return projBuId === user?.buId || projBuId === buId;
+  });
   const queue = mine.filter((s) => s.status === 'submitted');
   const flagged = queue.filter((s) => { const r = validateValues({ principle: s.principle, values: s.values, project: calc.projById.get(s.projectId), period: s.period, calc }); return r.errors.length + r.warnings.length > 0; }).length;
-  const series = useMemo(() => calc.monthlyTotals(scope, ui.fy, ui.boundary, ['p6_dg', 'p6_mach', 'p6_petrol', 'p6_grid']).map((r) => ({ month: shortMonth(r.period), scope1: Math.round(((r.p6_dg + r.p6_mach) * 2.68 + r.p6_petrol * 2.31) / 1000), scope2: Math.round((r.p6_grid * 0.71) / 1000) })), [calc, ui]); // eslint-disable-line
-  const attention = projects.filter((p) => { const st = Object.values(calc.projectStatus(p.id, CURRENT_PERIOD)); return st.some((s) => s === 'correction_required' || s === 'draft'); });
-  const submissionRate = Math.round(((cov.counts.approved + cov.counts.submitted) / cov.expected) * 100);
+  const series = useMemo(() => calc.monthlyTotals(scope, ui.fy, ui.boundary, ['p6_dg', 'p6_mach', 'p6_petrol', 'p6_grid']).map((r) => ({ month: shortMonth(r.period), scope1: Math.round(((r.p6_dg + r.p6_mach) * 2.68 + r.p6_petrol * 2.31) / 1000), scope2: Math.round((r.p6_grid * 0.71) / 1000) })), [calc, ui, scope]); // eslint-disable-line
+  const attention = projects.filter((p) => { const st = Object.values(calc.projectStatus(p.id, CURRENT_PERIOD) || {}); return st.some((s) => s === 'correction_required' || s === 'draft'); });
+  const expectedCount = cov.expected || 1;
+  const submissionRate = Math.round((((cov.counts.approved || 0) + (cov.counts.submitted || 0)) / expectedCount) * 100);
   const remind = (p) => { actions.remind({ projectId: p.id, text: `${periodLabel(CURRENT_PERIOD)} data is incomplete — please finish and submit by 5 Oct.`, entity: p.name, actor: { name: user.name, role: user.role } }); toast(`Reminder sent to ${p.name}.`); };
+
+  const subName = calc.subById.get(bu.subId)?.name || 'MEIL Infrastructure & Utilities';
 
   return (
     <div className="space-y-6">
-      <div><h1 className="text-2xl font-bold text-slate-900 tracking-tight">{bu.name}</h1><p className="text-sm text-slate-500 mt-1">{calc.subById.get(bu.subId).name} · manage site submissions and verify data before it rolls up to Group.</p></div>
+      <div><h1 className="text-2xl font-bold text-slate-900 tracking-tight">{bu.name}</h1><p className="text-sm text-slate-500 mt-1">{subName} · manage site submissions and verify data before it rolls up to Group.</p></div>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard title="Active sites" value={projects.length} unit="in this business unit" icon={MapPin} color="sky" />
         <StatCard title="Pending reviews" value={queue.length} unit="require your approval" icon={ClipboardCheck} color="amber" />

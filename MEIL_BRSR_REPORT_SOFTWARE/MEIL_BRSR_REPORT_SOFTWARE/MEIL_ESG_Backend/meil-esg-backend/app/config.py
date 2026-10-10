@@ -6,6 +6,7 @@ import os
 from datetime import timedelta
 
 BASE_DIR = os.path.abspath(os.path.dirname(os.path.dirname(__file__)))
+DEFAULT_SQLITE_PATH = os.path.join(BASE_DIR, "instance", "meil_esg.db").replace("\\", "/")
 
 
 def _bool(name, default="false"):
@@ -20,18 +21,21 @@ class Config:
     # --- Database ---
     # Default is a local SQLite file so `python run.py` works with zero external services
     # for a quick demo; set DATABASE_URL to a MySQL DSN for the real deployment, e.g.
-    # mysql+pymysql://esg_user:password@mysql:3306/meil_esg
-    SQLALCHEMY_DATABASE_URI = os.getenv("DATABASE_URL", f"sqlite:///{BASE_DIR}/instance/meil_esg.db")
+    _db_env = os.getenv("DATABASE_URL", "").strip()
+    if not _db_env or _db_env.startswith("sqlite:///instance/") or _db_env == "sqlite:///instance/meil_esg.db":
+        SQLALCHEMY_DATABASE_URI = f"sqlite:///{DEFAULT_SQLITE_PATH}"
+    else:
+        SQLALCHEMY_DATABASE_URI = _db_env
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     SQLALCHEMY_ENGINE_OPTIONS = {"pool_pre_ping": True}
 
     # --- JWT ---
-    JWT_SECRET_KEY = os.getenv("JWT_SECRET_KEY", "dev-jwt-secret-change-me")
+    JWT_SECRET_KEY = os.getenv("JWT_SECRET_KEY", "dev-jwt-secret-change-me-32-bytes-minimum-key!")
     JWT_ACCESS_TOKEN_EXPIRES = timedelta(minutes=int(os.getenv("JWT_ACCESS_MINUTES", "30")))
     JWT_REFRESH_TOKEN_EXPIRES = timedelta(days=int(os.getenv("JWT_REFRESH_DAYS", "30")))
     JWT_TOKEN_LOCATION = ["headers", "cookies"]
     JWT_COOKIE_SECURE = _bool("JWT_COOKIE_SECURE", "false")
-    JWT_COOKIE_CSRF_PROTECT = _bool("JWT_COOKIE_CSRF_PROTECT", "true")
+    JWT_COOKIE_CSRF_PROTECT = _bool("JWT_COOKIE_CSRF_PROTECT", "false")
     JWT_REFRESH_COOKIE_PATH = "/api/v1/auth/refresh"
     JWT_COOKIE_SAMESITE = "Lax"
 
@@ -39,7 +43,7 @@ class Config:
     CORS_ORIGINS = os.getenv("CORS_ORIGINS", "http://localhost:5173").split(",")
 
     # --- Rate limiting ---
-    RATELIMIT_STORAGE_URI = os.getenv("REDIS_URL", "memory://")
+    RATELIMIT_STORAGE_URI = os.getenv("RATELIMIT_STORAGE_URI", "memory://")
     RATELIMIT_DEFAULT = "200 per minute"
 
     # --- Redis / Celery ---

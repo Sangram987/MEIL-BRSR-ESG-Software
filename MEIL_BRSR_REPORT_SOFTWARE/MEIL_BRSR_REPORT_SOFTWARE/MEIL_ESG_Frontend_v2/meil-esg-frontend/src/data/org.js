@@ -207,9 +207,11 @@ export function buildSeed(org, users) {
   const disclosures = {
     // Section A — General Disclosures (Annexure I, Parts I–VII)
     A: {
-      cin: '', entityName: 'Megha Engineering & Infrastructures Limited', incorporationYear: '',
-      registeredOffice: 'Hyderabad, Telangana', corporateOffice: '', email: 'esg@meil.in', telephone: '',
-      website: '', financialYear: 'FY 2026-27', stockExchanges: 'BSE, NSE', paidUpCapital: '',
+      cin: 'U45201TG2006PLC050271', entityName: 'Megha Engineering & Infrastructures Limited', incorporationYear: '2006',
+      registeredOffice: 'Plot No. 1, Balanagar, Hyderabad - 500037, Telangana, India',
+      corporateOffice: 'S-2, Technocrat Industrial Estate, Balanagar, Hyderabad - 500037, Telangana, India',
+      email: 'esg@meil.in', telephone: '+91 40 4433 6700',
+      website: 'https://www.meil.in', financialYear: 'FY 2026-27', stockExchanges: 'BSE, NSE', paidUpCapital: '604250000',
       contact: 'Rajesh Kumar, Group ESG Admin', boundaryDeclared: 'consolidated',
       businessActivities: [{ activity: 'Engineering, Procurement & Construction (EPC)', description: 'Irrigation, tunnels, roads & bridges', turnoverPct: '58' }, { activity: 'Oil & Gas / Hydrocarbons', description: 'Refinery EPC, pipelines, city gas distribution', turnoverPct: '27' }, { activity: 'Power & Renewables', description: 'Thermal, hydro, solar EPC', turnoverPct: '15' }],
       productsServices: [{ product: 'Irrigation & water infrastructure', nic: '4222', turnoverPct: '32' }, { product: 'Tunnels & underground transit', nic: '4221', turnoverPct: '18' }, { product: 'Roads & bridges', nic: '4210', turnoverPct: '17' }, { product: 'Oil & gas pipelines / refinery EPC', nic: '4220', turnoverPct: '27' }, { product: 'Power generation EPC', nic: '4220', turnoverPct: '6' }],
@@ -225,22 +227,23 @@ export function buildSeed(org, users) {
         prev: { empM: '12.0', empF: '14.2', empT: '12.4', wkM: '19.5', wkF: '21.0', wkT: '19.7' },
         prev2: { empM: '13.1', empF: '15.0', empT: '13.5', wkM: '20.8', wkF: '22.4', wkT: '21.0' },
       },
-      csrApplicable: 'Yes', csrTurnover: '', csrNetWorth: '',
-      stakeholderComplaints: Object.fromEntries(STAKEHOLDER_GROUPS.map((g) => [g, { mechanism: 'Yes', link: '', curFiled: '0', curPending: '0', curRemarks: '', prevFiled: '0', prevPending: '0', prevRemarks: '' }])),
+      csrApplicable: 'Yes', csrTurnover: '27850000000', csrNetWorth: '13420000000',
+      stakeholderComplaints: Object.fromEntries(STAKEHOLDER_GROUPS.map((g) => [g, { mechanism: 'Yes', link: 'https://www.meil.in/grievance-redressal', curFiled: '0', curPending: '0', curRemarks: 'Resolved under vigil mechanism', prevFiled: '0', prevPending: '0', prevRemarks: '' }])),
     },
     // Section B — Management & Process Disclosures (Annexure I, Q1–Q12)
     B: {
       policies: Object.fromEntries(PRINCIPLES.map((p) => [p.id, {
-        hasPolicy: 'Yes', boardApproved: 'Yes', link: '', translatedToProcedure: 'Yes', extendsToValueChain: p.id === 'P3' || p.id === 'P6' ? 'Yes' : 'No',
-        codes: '', targets: [{ target: '', baseline: '', current: '', status: '' }],
+        hasPolicy: 'Yes', boardApproved: 'Yes', link: 'https://www.meil.in/esg-policies', translatedToProcedure: 'Yes', extendsToValueChain: p.id === 'P3' || p.id === 'P6' ? 'Yes' : 'No',
+        codes: 'MEIL-ESG-POL-01', targets: [{ target: 'Achieve zero net fatalities and 25% renewable transition', baseline: 'FY 2024-25 baseline', current: '18% achieved in FY 2026-27', status: 'On Track' }],
         notCoveredReason: '',
       }])),
-      directorStatement: '', esgHead: 'Rajesh Kumar, Group ESG Admin', committee: 'Sustainability & Risk Committee',
+      directorStatement: 'Megha Engineering & Infrastructures Limited (MEIL) is steadfastly committed to sustainable nation-building, decarbonization, top-tier workplace safety, community enrichment, and uncompromising ethical corporate governance across all infrastructure, water, energy, and mobility operations.',
+      esgHead: 'Rajesh Kumar, Group ESG Admin', committee: 'Sustainability & Risk Committee',
       review: Object.fromEntries(PRINCIPLES.map((p) => [p.id, { by: 'Committee of the Board', frequency: 'Quarterly' }])),
-      externalAssessment: { done: 'No', agency: '' },
+      externalAssessment: { done: 'Yes', agency: 'BSI Group India / DNV Business Assurance' },
     },
-    core8: { dataBreaches: '0', dataBreachRatio: '0', payablesDays: '' },
-    core9: { purchTradingHousePct: '', purchTradingHouseCount: '', purchTop10Pct: '', salesDealerPct: '', salesDealerCount: '', salesTop10Pct: '', rptPurchasesPct: '', rptSalesPct: '', rptLoansPct: '', rptInvestmentsPct: '' },
+    core8: { dataBreaches: '0', dataBreachRatio: '0', payablesDays: '48' },
+    core9: { purchTradingHousePct: '3.4', purchTradingHouseCount: '12', purchTop10Pct: '28.5', salesDealerPct: '4.2', salesDealerCount: '15', salesTop10Pct: '32.1', rptPurchasesPct: '1.8', rptSalesPct: '2.1', rptLoansPct: '0', rptInvestmentsPct: '0.5' },
   };
   const assuranceOpinions = {
     'FY 2025-26': Object.fromEntries(['ghg', 'water', 'energy', 'circ', 'safety', 'gender', 'inclusive', 'fair', 'open'].map((k) => [k, { mode: 'assurance', status: 'Reasonable assurance', provider: 'Ananya Rao & Associates', providerType: 'Independent external assurance provider', standard: 'ISAE 3000', scope: 'MEIL Group — all business units', methodology: 'Sampling of site evidence, recalculation of emission/water/waste totals, management enquiry.', evidenceTested: 'Utility bills, fuel registers, safety logs for a risk-based sample of sites.', exceptions: '', independenceConfirmed: true, by: 'Ananya Rao', at: '2026-07-18', note: 'Unmodified conclusion.' }])),
